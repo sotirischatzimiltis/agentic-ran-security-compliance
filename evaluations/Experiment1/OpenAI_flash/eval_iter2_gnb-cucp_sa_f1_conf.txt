@@ -1,0 +1,171 @@
+Filename: gnb-cucp.sa.f1.conf
+Revision iteration: 1
+
+=== REFLECTION OUTPUT (JSON) ===
+{
+  "OverallAssessment": "The assessment correctly identified the two main configuration violations and referenced valid standards and security impacts. The minimal-change correction properly addressed these specific issues without introducing extraneous changes.",
+  "Issues": [
+    {
+      "id": "ISSUE-1",
+      "type": "NoIssues",
+      "description": "The compliance assessment and correction appropriately focused on the explicit violations in the configuration: the use of a null ciphering algorithm ('nea0') and the disabling of DRB integrity protection ('drb_integrity = no'). Both violations are real, clearly related to present configuration parameters, and supported by precise citations. The minimal fixes respect the minimal-change policy, and no missing violations or scope errors are detected.",
+      "required_action": "No further action required; the assessment and correction are accepted."
+    }
+  ],
+  "MustFixSummary": []
+}
+
+=== ORIGINAL CONFIGURATION ===
+Active_gNBs = ( "gNB-OAI");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-OAI";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1 }, { sst = 2 }, { sst = 3 }) });
+
+
+    nr_cellid = 12345678L;
+
+    tr_s_preference = "f1";
+
+    local_s_address = "192.168.71.150";
+    remote_s_address = "0.0.0.0"; # multiple DUs
+    local_s_portc   = 501;
+    local_s_portd   = 2152;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2152;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+
+    ////////// AMF parameters:
+    amf_ip_address = ({ ipv4 = "oai-amf"; });
+
+    E1_INTERFACE =
+    (
+      {
+        type = "cp";
+        ipv4_cucp = "192.168.71.150";
+        port_cucp = 38462;
+        ipv4_cuup = "0.0.0.0"; # multiple CU-UPs
+        port_cuup = 38462;
+      }
+    )
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.150/24";
+    };
+  }
+);
+
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea0" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2", "nia0" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "no";
+};
+     log_config :
+     {
+       global_log_level                      ="info";
+       hw_log_level                          ="info";
+       phy_log_level                         ="info";
+       mac_log_level                         ="info";
+       rlc_log_level                         ="debug";
+       pdcp_log_level                        ="info";
+       rrc_log_level                         ="info";
+       f1ap_log_level                         ="info";
+       ngap_log_level                         ="debug";
+       sctp_log_level                         ="info";
+    };
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Compliance Assessment:
+
+1. Security-Relevant Fields Identified:
+- ciphering_algorithms = ( "nea0" )
+- integrity_algorithms = ( "nia2", "nia0" )
+- drb_ciphering = "yes"
+- drb_integrity = "no"
+
+2. Analysis against standards:
+
+- Ciphering algorithm "nea0" is included but its security strength must be considered within 3GPP TS 33.501 Clause 5.3.2 regarding ciphering of user data (TS 33.501 as per ts_138401v160300p.pdf).
+- Integrity algorithms include "nia2" and "nia0". Integrity protection is required as per TS 33.501 clauses 5.3.9, 5.3.10, 9.2 and 9.4 (3GPP TS 33.523).
+- drb_integrity = "no" means integrity protection for Data Radio Bearers (DRBs) is disabled. According to the standards (ts_133501v180900p.pdf), user plane integrity protection is required for DRBs to prevent tampering and attacks.
+- SCTP settings lack indication of security features such as input validation or anti-DoS measures as per O-RAN TS STS-R004 (O-RAN.WG11.TS.STS-R004-v11.00.pdf).
+- F1 and E1 interface parameters lack explicit configuration of confidentiality, integrity and replay protection. Standards require all these protections on F1 and E1 interfaces (TS 33.501, TS 33.523).
+- Logging parameters do not specify security-sensitive event logging. O-RAN requires logging of account and identity security events (O-RAN.WG11.TS.STS-R004-v11.00.pdf).
+
+3. Violations Found:
+- DRB integrity disabled (drb_integrity = "no") violates the security requirements for user plane integrity protection (TS 33.501, ts_133501v180900p.pdf).
+- Ciphering algorithms include "nea0" which is a null cipher (no encryption), undermining confidentiality requirements. Standards require non-NULL ciphering algorithms to be used unless explicitly allowed by policy (TS 33.501, ts_138401v160300p.pdf).
+- No mention or configuration allowing SCTP input validation or DoS protection (O-RAN.WG11.TS.STS-R004).
+- F1 and E1 interface security configurations do not explicitly confirm confidentiality, integrity, replay protection (TS 33.501, TS 33.523).
+- Logging configuration does not include security event logging requirements (O-RAN.WG11.TS.STS-R004).
+
+4. Minimal Fixes (only adjust existing fields, no additions):
+
+- Change ciphering_algorithms from ("nea0") to ("nea2") or stronger algorithm, as nea0 is null cipher and non-compliant.
+- Enable drb_integrity from "no" to "yes" to comply with DRB integrity protection requirements.
+- SCTP config cannot be fixed by adding fields not present; recommended to mention out-of-scope for this config.
+- No explicit fields for F1/E1 interface security in config, so no change can be made.
+- No changes possible to logging beyond current fields; out-of-scope recommendations apply.
+
+5. Security Impact:
+
+- Using nea0 (null cipher) allows unencrypted data, exposing to eavesdropping.
+- Disabling DRB integrity protection allows undetected data tampering or injection attacks in user plane.
+- Lack of SCTP input validation configuration risks buffer overflow/injection attack vulnerabilities.
+- Insufficient explicit protection on F1/E1 interfaces risks data confidentiality and integrity.
+- Lack of security event logging reduces forensic and attack detection capability.
+
+
+=== CORRECTED CONFIGURATION ===
+...
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea2" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2", "nia0" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "yes";
+};
+...

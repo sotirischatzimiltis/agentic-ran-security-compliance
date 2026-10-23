@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root { 
+      --bg: #0d1117; --card: #161b22; --border: #30363d; 
+      --text: #c9d1d9; --accent: #58a6ff; --danger: #f85149; 
+      --success: #3fb950; --purple: #bc8cff; --muted: #8b949e;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 40px; line-height: 1.6; margin: 0; }
+    
+    /* Header & Top Stats */
+    .header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 25px; }
+    h1 { font-size: 26px; margin: 0; font-weight: 600; }
+    .stats { display: flex; gap: 15px; margin-top: 15px; }
+    .stat-box { background: var(--card); border: 1px solid var(--border); padding: 8px 16px; border-radius: 6px; font-size: 13px; }
+    
+    .section-label { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; display: block; letter-spacing: 1px; margin-top: 30px; }
+    
+    /* Compliance Summary Block */
+    .summary-card { background: rgba(88, 166, 255, 0.05); border: 1px solid var(--accent); padding: 20px; border-radius: 8px; margin-bottom: 10px; }
+    
+    /* Violation Card Styles */
+    .violation-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    .violation-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+    .v-num { font-weight: bold; color: var(--accent); margin-right: 8px; font-size: 18px; }
+    .v-title { font-weight: 600; font-size: 16px; color: #f0f6fc; }
+    .v-sev { font-size: 10px; font-weight: 800; padding: 3px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .v-sev.critical, .v-sev.high { background: #490606; color: #ff7b72; border: 1px solid rgba(248, 81, 73, 0.4); }
+    .v-sev.medium { background: #3d2b1b; color: #f2cc60; border: 1px solid rgba(187, 128, 9, 0.4); }
+    
+    .v-body { padding: 20px; }
+    .v-meta p { margin: 6px 0; font-size: 14px; }
+    .bad { color: #ffa198; background: #2c1616; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+    .fix { color: var(--success); font-weight: 500; }
+    .ref-tag { color: var(--accent); font-weight: 600; font-family: monospace; }
+    
+    /* Highlighted Specification/Chunk Text */
+    .v-chunk { margin-top: 20px; background: #0d1117; border-left: 4px solid var(--accent); padding: 18px; border-radius: 0 4px 4px 0; }
+    .v-chunk-label { font-size: 11px; font-weight: bold; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .v-chunk p { margin: 0; font-size: 14px; color: #b1bac4; font-style: italic; line-height: 1.5; }
+
+    /* Reflection Analysis Block */
+    .reflection-card { border: 1px solid var(--purple); background: rgba(188, 140, 255, 0.05); padding: 20px; border-radius: 8px; }
+    .reflection-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .rev-pill { padding: 2px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .rev-yes { background: #3d2b1b; color: #f2cc60; border: 1px solid #f2cc60; }
+    .rev-no { background: #1b2b3d; color: #79c0ff; border: 1px solid #79c0ff; }
+
+    /* Comparison Review Grid */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    pre { background: #0d1117; padding: 15px; border: 1px solid var(--border); font-size: 12px; color: #d1d5db; overflow-x: auto; max-height: 450px; border-radius: 6px; }
+    
+    .status-pill { padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+    .non-compliant { background: var(--danger); color: white; }
+    .compliant { background: var(--success); color: white; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Security Compliance Report</h1>
+    <div class="stats">
+      <div class="stat-box"><b>File:</b> gnb-cuup.sa.f1.conf</div>
+      <div class="stat-box"><b>Function:</b> gNB(CU-UP)</div>
+      <div class="stat-box"><b>Status:</b> <span class="status-pill non-compliant">Non-Compliant</span></div>
+    </div>
+  </div>
+
+  <span class="section-label">Compliance Assessment Summary</span>
+  <div class="summary-card">
+    <p style="margin:0; font-size: 15px;">The gNB(CU-UP) configuration is non-compliant with 3GPP security requirements. Critical violations include missing IPsec/DTLS protection for the E1 interface, NGU interface, and SCTP transport layer. These omissions expose control plane and user plane traffic to eavesdropping, tampering, and replay attacks.</p>
+  </div>
+
+  <span class="section-label">Violation Details</span>
+  <div class="violation-list">
+    
+  <div class="violation-item">
+    <div class="violation-header">
+      <div class="v-title-row">
+        <span class="v-num">1.</span>
+        <span class="v-title">Missing IPsec/DTLS for E1 Interface</span>
+      </div>
+      <span class="v-sev critical">Critical</span>
+    </div>
+    <div class="v-body">
+      <div class="v-meta">
+        <p><b>Non-Compliant Value:</b> <code class="bad">No security configuration</code></p>
+        <p><b>Fix:</b> <span class="fix">Add IPsec or DTLS configuration to the E1_INTERFACE block.</span></p>
+        <p><b>Reference:</b> <span class="ref-tag">3GPP TS 33.501, clause 5.3.10, 3GPP TS 33.501, clause 9.8.3</span></p>
+      </div>
+      
+      <div class="v-chunk">
+        <div class="v-chunk-label">Specification Text:</div>
+        <p>The E1 interface between CU-CP and CU-UP shall be confidentiality, integrity, and replay-protected using IPsec or DTLS as per 3GPP TS 33.501, clauses 5.3.10 and 9.8.3.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="violation-item">
+    <div class="violation-header">
+      <div class="v-title-row">
+        <span class="v-num">2.</span>
+        <span class="v-title">Missing IPsec for NGU Interface (User Plane)</span>
+      </div>
+      <span class="v-sev critical">Critical</span>
+    </div>
+    <div class="v-body">
+      <div class="v-meta">
+        <p><b>Non-Compliant Value:</b> <code class="bad">No IPsec configuration</code></p>
+        <p><b>Fix:</b> <span class="fix">Add IPsec configuration to the NETWORK_INTERFACES block.</span></p>
+        <p><b>Reference:</b> <span class="ref-tag">3GPP TS 33.523, clause 6.2.2.1.4, 3GPP TS 33.523, clause 6.2.2.1.5</span></p>
+      </div>
+      
+      <div class="v-chunk">
+        <div class="v-chunk-label">Specification Text:</div>
+        <p>The NGU interface shall be confidentiality, integrity, and replay-protected for user plane data as per 3GPP TS 33.501, clauses 5.3.9, 9.3, and 9.4.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="violation-item">
+    <div class="violation-header">
+      <div class="v-title-row">
+        <span class="v-num">3.</span>
+        <span class="v-title">Missing DTLS/IPsec for SCTP Transport</span>
+      </div>
+      <span class="v-sev high">High</span>
+    </div>
+    <div class="v-body">
+      <div class="v-meta">
+        <p><b>Non-Compliant Value:</b> <code class="bad">No DTLS or IPsec configuration</code></p>
+        <p><b>Fix:</b> <span class="fix">Add DTLS or IPsec configuration to the SCTP block.</span></p>
+        <p><b>Reference:</b> <span class="ref-tag">3GPP TS 33.501, clause 9.8.3</span></p>
+      </div>
+      
+      <div class="v-chunk">
+        <div class="v-chunk-label">Specification Text:</div>
+        <p>SCTP associations shall be protected using DTLS or IPsec as per 3GPP TS 33.501, clause 9.8.3.</p>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <span class="section-label">Reflection Agent Analysis</span>
+  <div class="reflection-card">
+    <div class="reflection-header">
+      <span class="rev-pill rev-yes">
+        REVISION NEEDED: YES
+      </span>
+    </div>
+    <p style="margin:0; font-size: 14px; color: #d1d9e6; line-height: 1.6;">1. **Structure Validation**: The Compliance Agent correctly identified violations and provided a corrected configuration. However, further validation revealed issues with the fixes and compliance requirements.
+
+2. **Evidence &amp; KB Validation**: All violations referenced valid evidence from the provided KB_EVIDENCE. The excerpts in the violations match the ORIGINAL_CONFIG verbatim, and the KB snippets support the requirements.
+
+3. **Fix Correctness Issues**:
+   - **V-001 (E1 Interface)**: The fix adds an `ipsec` block to the `E1_INTERFACE` configuration, which is correct and aligns with the requirement for confidentiality, integrity, and replay protection.
+   - **V-002 (NGU Interface)**: The fix adds an `ipsec` block to the `NETWORK_INTERFACES` configuration. However, the requirement specifically mandates protection for the **user plane** on the NGU interface. The corrected configuration does not explicitly distinguish between control plane and user plane protection, which could lead to non-compliance if the IPsec configuration is not applied correctly to the user plane traffic.
+   - **V-003 (SCTP Transport)**: The fix adds a `dtls` block to the `SCTP` configuration, which is correct and aligns with the requirement for DTLS or IPsec protection. However, the `ipsec` block added at the root level (`gNBs[0]`) is unnecessary for this violation and could introduce redundancy.
+
+4. **Parameter Context Compliance**: The SMF Integrity and Confidentiality policies are marked as **Optional** in the prompt. This means that while protection is recommended, it is not mandatory to enforce it for compliance. However, the violations and fixes provided by the Compliance Agent do not violate this context, as they focus on interfaces (E1, NGU, SCTP) that are explicitly required to be protected by 3GPP standards.
+
+5. **Missed Issues**: No additional insecure settings were identified in the ORIGINAL_CONFIG or CORRECTED_CONFIG beyond those already addressed.
+
+6. **Required Actions**:
+   - The `ipsec` block added to the root level (`gNBs[0]`) should be removed as it is redundant and not required for any of the identified violations.
+   - The `ipsec` configuration for the `NETWORK_INTERFACES` block must explicitly ensure that user plane traffic on the NGU interface is protected. This should be clarified in the configuration to avoid ambiguity.</p>
+  </div>
+
+  <span class="section-label">Configuration Review</span>
+  <div class="grid">
+    <div>
+      <p style="font-size: 11px; font-weight: bold; color: var(--muted); margin-bottom: 8px; text-transform: uppercase;">Original Configuration</p>
+      <pre>Active_gNBs = ( "gNB-OAI");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+    gNB_CU_UP_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-OAI";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1, sd = 0xffffff }) });
+
+
+    tr_s_preference = "f1";
+
+    local_s_address = "192.168.72.161";
+    remote_s_address = "192.168.72.171";
+    local_s_portc   = 501;
+    local_s_portd   = 2153;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2153;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+    E1_INTERFACE =
+    (
+      {
+        type = "up";
+        ipv4_cucp = "192.168.71.150";
+        ipv4_cuup = "192.168.71.161";
+      }
+    )
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.161/24";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.71.161/24";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+  }
+);
+
+log_config : {
+  global_log_level = "info";
+  pdcp_log_level   = "info";
+  f1ap_log_level   = "info";
+  ngap_log_level   = "info";
+};
+</pre>
+    </div>
+    <div>
+      <p style="font-size: 11px; font-weight: bold; color: var(--muted); margin-bottom: 8px; text-transform: uppercase;">Corrected Configuration</p>
+      <pre>&lt;&lt;&lt;WORKING&gt;&gt;&gt;
+Active_gNBs = ( "gNB-OAI");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+    gNB_CU_UP_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-OAI";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1, sd = 0xffffff }) });
+
+
+    tr_s_preference = "f1";
+
+    local_s_address = "192.168.72.161";
+    remote_s_address = "192.168.72.171";
+    local_s_portc   = 501;
+    local_s_portd   = 2153;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2153;
+    ipsec {
+      enabled = true;
+      ikev2_auth = "certificate";
+      esp_encryption = "AES-GCM-128";
+      esp_integrity = "AES-GCM-128";
+    };
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+        dtls {
+          enabled = true;
+          certificate = "/path/to/certificate.pem";
+          private_key = "/path/to/private_key.pem";
+        };
+    };
+
+    E1_INTERFACE =
+    (
+      {
+        type = "up";
+        ipv4_cucp = "192.168.71.150";
+        ipv4_cuup = "192.168.71.161";
+        ipsec {
+          enabled = true;
+          ikev2_auth = "certificate";
+          esp_encryption = "AES-GCM-128";
+          esp_integrity = "AES-GCM-128";
+        };
+      }
+    );
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.161/24";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.71.161/24";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+        ipsec {
+          enabled = true;
+          ikev2_auth = "certificate";
+          esp_encryption = "AES-GCM-128";
+          esp_integrity = "AES-GCM-128";
+        };
+    };
+  }
+);
+
+log_config : {
+  global_log_level = "info";
+  pdcp_log_level   = "info";
+  f1ap_log_level   = "info";
+  ngap_log_level   = "info";
+};
+&lt;&lt;&lt;END&gt;&gt;&gt;</pre>
+    </div>
+  </div>
+</body>
+</html>

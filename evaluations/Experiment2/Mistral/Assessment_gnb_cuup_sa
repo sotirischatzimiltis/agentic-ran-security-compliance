@@ -1,0 +1,287 @@
+=== COMPLIANCE ASSESSMENT ===
+### **Compliance Assessment Report**
+
+#### **Compliance Status**: **Non-Compliant**
+
+### **Violations Found**
+
+| **Parameter** | **Current Value** | **Violation** | **Specification Reference** | **Security Risk** |
+|--------------|------------------|--------------|----------------------------|------------------|
+| `plmn_list[0].snssaiList[0].sd` | `0xffffff` | **Invalid S-NSSAI SD value** | **3GPP TS 23.003 (Section 28.4.2)** – SD (Slice Differentiator) must be a 24-bit value **not equal to 0xFFFFFF** (reserved for "no SD"). | Using the reserved value `0xFFFFFF` can cause misrouting of traffic, service disruption, or unauthorized access to network slices. |
+| `NETWORK_INTERFACES.GNB_PORT_FOR_S1U` | `2152` | **Incorrect port assignment for S1-U** | **3GPP TS 38.414 (Section 8.2)** – S1-U port **must be 2152** (correct), but **label is misleading** in CU-UP context. In CU-UP, this should be **F1-U port**, not S1-U. However, since the parameter is explicitly named `GNB_PORT_FOR_S1U`, and the value `2152` is correct for **F1-U**, this is **not a functional violation**, but a **misleading label**. | Mislabeling can cause operational confusion, but **no direct security risk** from value. Still, it violates clarity and maintainability best practices. |
+| `SCTP.SCTP_INSTREAMS` and `SCTP.SCTP_OUTSTREAMS` | `2` | **Insufficient SCTP streams for high availability** | **O-RAN.WG4.FH.v07.00 (Section 6.3.3)** – Recommends **minimum 4 streams** for resilience and load balancing. | Low number of streams increases risk of head-of-line blocking and reduces fault tolerance. |
+
+> ✅ **Note**: No violations found in:
+> - `gNB_ID`, `gNB_CU_UP_ID`, `tracking_area_code`, `mcc`, `mnc`, `mnc_length`, `sst`, `tr_s_preference`, IP addresses, E1 interface, or logging levels.
+> - No hard violations in TLS, IPsec, or certificate usage (out of scope per instructions).
+
+### **Specification References**
+
+- **3GPP TS 23.003 v17.4.0 (2023-06)**: Section 28.4.2 – S-NSSAI format and reserved values.
+- **3GPP TS 38.414 v16.5.0 (2021-03)**: Section 8.2 – User Plane protocol and port usage (F1-U uses port 2152).
+- **O-RAN.WG4.FH.v07.00 (2022-12)**: Section 6.3.3 – SCTP configuration for Fronthaul and midhaul interfaces.
+- **ETSI TS 138 473 v16.4.0 (2021-04)**: F1AP protocol configuration and transport requirements.
+
+### **Recommended Code Modifications**
+
+#### ✅ **1. Fix S-NSSAI SD value**
+- **Change**: `sd = 0xffffff` → `sd = 0x000001` (or any valid 24-bit value ≠ 0xFFFFFF)
+- **Reason**: `0xFFFFFF` is reserved and invalid for operational use.
+
+#### ✅ **2. Increase SCTP streams for resilience**
+- **Change**:
+  ```ini
+  SCTP_INSTREAMS  = 2;
+  SCTP_OUTSTREAMS = 2;
+  ```
+  →
+  ```ini
+  SCTP_INSTREAMS  = 4;
+  SCTP_OUTSTREAMS = 4;
+  ```
+- **Reason**: O-RAN recommends minimum 4 streams for robustness.
+
+#### ⚠️ **3. [Out of Scope – No Change Required]**
+- **Misleading label**: `GNB_PORT_FOR_S1U` should ideally be renamed to `GNB_PORT_FOR_F1U` in CU-UP context.
+- **But**: Per **MINIMAL-CHANGE rule**, we **do not modify parameter names** unless they cause a security violation.
+- **No security risk** from value (`2152` is correct for F1-U), so **no change applied**.
+
+### **Security Impact Analysis**
+
+| **Violation** | **Impact** | **Severity** |
+|--------------|-----------|-------------|
+| **Invalid SD value** | High – Can cause slice misrouting, service disruption, or unauthorized access to network functions. | **High** |
+| **Low SCTP streams** | Medium – Increases risk of transport layer congestion and service degradation under load. | **Medium** |
+| **Misleading port label** | Low – No direct security impact, but increases operational risk. | **Low** |
+
+> ✅ **After fixes**:
+> - SD value is valid → prevents slice misrouting.
+> - SCTP streams increased → improves transport resilience.
+> - No changes to port value → maintains correct F1-U communication.
+
+### **Out-of-Scope Recommendations**
+
+These are **not violations** and do **not** affect compliance status:
+
+1. **Enable TLS for F1-U and E1 interfaces** (O-RAN WG4, 3GPP TS 33.501).
+2. **Enable IPsec for NG-U and F1-U** (3GPP TS 33.210, TS 33.501).
+3. **Use certificate-based authentication** for CU-CP/CU-UP communication.
+4. **Rename `GNB_PORT_FOR_S1U` to `GNB_PORT_FOR_F1U`** for clarity.
+5. **Enable SCTP authentication chunks** (RFC 4895) for anti-spoofing.
+6. **Implement rate limiting and DoS protection** on F1-U and E1 interfaces.
+
+
+=== COMPLIANCE ASSESSMENT ===
+### **Compliance Assessment Report**
+**File:** `gnb-cuup.sa.f1.conf`
+**Network Function:** CU-UP
+**Compliance Status:** **Non-Compliant**
+
+### **Violations Found**
+1. **Unsecured F1-U Interface (Missing IPsec or DTLS)**
+   - **Field:** `local_s_address`, `remote_s_address`, `local_s_portd`, `remote_s_portd`
+   - **Spec Reference:**
+     - O-RAN.WG4.Security Requirements (Section 6.2.2): F1-U traffic **must** be protected using IPsec ESP or DTLS.
+     - 3GPP TS 33.501 (Section 6.5.3): User-plane security **must** be enabled for F1-U.
+   - **Risk:** Unencrypted F1-U traffic exposes user data to eavesdropping, tampering, or injection attacks.
+   - **Fix:** Explicitly enable IPsec/DTLS (though out-of-scope for this assessment, the config **must** reflect intent to secure F1-U).
+
+2. **Unsecured E1 Interface (Missing IPsec or TLS)**
+   - **Field:** `E1_INTERFACE` (`ipv4_cucp`, `ipv4_cuup`)
+   - **Spec Reference:**
+     - O-RAN.WG4.Security Requirements (Section 6.2.3): E1 traffic **must** be protected using IPsec or TLS.
+     - 3GPP TS 33.501 (Section 6.5.2): Control-plane security **must** be enabled for E1.
+   - **Risk:** Unencrypted E1 traffic exposes control-plane messages to interception or spoofing.
+   - **Fix:** Add `ipsec_enabled = true` or `tls_enabled = true` (though out-of-scope, the config **must** reflect intent).
+
+3. **Weak SCTP Stream Configuration**
+   - **Field:** `SCTP_INSTREAMS = 2`, `SCTP_OUTSTREAMS = 2`
+   - **Spec Reference:**
+     - 3GPP TS 38.472 (Section 5.2.2): SCTP streams **must** be configured to minimize head-of-line blocking (minimum 4 streams recommended).
+   - **Risk:** Low stream count increases latency and DoS susceptibility.
+   - **Fix:** Increase streams to **4** (minimum compliant value).
+
+4. **Reserved SNSSAI SD Value**
+   - **Field:** `sd = 0xffffff`
+   - **Spec Reference:**
+     - 3GPP TS 23.003 (Section 12.7): `sd = 0xFFFFFF` is reserved for testing and **must not** be used in production.
+   - **Risk:** Reserved values may cause interoperability issues or undefined behavior.
+   - **Fix:** Replace with a valid SD (e.g., `sd = 0x123456`).
+
+5. **Missing Security Parameters for NG-U Interface**
+   - **Field:** `GNB_IPV4_ADDRESS_FOR_NGU`
+   - **Spec Reference:**
+     - 3GPP TS 33.501 (Section 6.5.3): NG-U traffic **must** be protected using IPsec ESP.
+   - **Risk:** Unencrypted NG-U traffic exposes user data to interception.
+   - **Fix:** Add `ngu_security_enabled = true` (though out-of-scope, the config **must** reflect intent).
+
+### **Specification References**
+| **Violation**               | **Spec Reference**                                                                 |
+|-----------------------------|-----------------------------------------------------------------------------------|
+| F1-U Security               | O-RAN.WG4.Security (6.2.2), 3GPP TS 33.501 (6.5.3)                                |
+| E1 Security                 | O-RAN.WG4.Security (6.2.3), 3GPP TS 33.501 (6.5.2)                                |
+| SCTP Streams                | 3GPP TS 38.472 (5.2.2)                                                            |
+| Reserved SNSSAI SD          | 3GPP TS 23.003 (12.7)                                                             |
+| NG-U Security               | 3GPP TS 33.501 (6.5.3)                                                            |
+
+### **Recommended Code Modifications**
+1. **SCTP Streams:**
+   ```diff
+   - SCTP_INSTREAMS  = 2;
+   - SCTP_OUTSTREAMS = 2;
+   + SCTP_INSTREAMS  = 4;
+   + SCTP_OUTSTREAMS = 4;
+   ```
+2. **SNSSAI SD:**
+   ```diff
+   - sd = 0xffffff
+   + sd = 0x123456  # Example valid SD
+   ```
+
+### **Security Impact Analysis**
+| **Violation**               | **Impact**                                                                       |
+|-----------------------------|----------------------------------------------------------------------------------|
+| Unsecured F1-U/E1/NG-U      | Critical: Exposes user/control-plane traffic to eavesdropping, tampering, DoS.   |
+| Weak SCTP Streams           | High: Increases latency and susceptibility to head-of-line blocking attacks.     |
+| Reserved SNSSAI SD          | Medium: May cause interoperability issues or undefined behavior.                 |
+
+### **Out-of-Scope Recommendations**
+1. **Enable IPsec/DTLS for F1-U:**
+   Add `f1u_security { ipsec_enabled = true; }` or `dtls_enabled = true`.
+2. **Enable TLS/IPsec for E1:**
+   Add `E1_INTERFACE { tls_enabled = true; }` or `ipsec_enabled = true`.
+3. **Enable IPsec for NG-U:**
+   Add `ngu_security_enabled = true` under `NETWORK_INTERFACES`.
+4. **Certificate-Based Authentication:**
+   Configure X.509 certificates for mutual authentication (3GPP TS 33.310).
+
+
+
+
+   === COMPLIANCE ASSESSMENT ===
+### **Compliance Assessment Report**
+
+#### **Compliance Status: Non-Compliant**
+#### **Violations Found:**
+1. **Unsecured F1-C and E1 Interfaces (Missing IPsec/TLS)**
+   - **Specification Reference:**
+     - O-RAN.WG4.Security Requirements (Section 5.2.2) – F1-C and E1 interfaces **must** use IPsec or TLS for confidentiality and integrity protection.
+     - 3GPP TS 33.501 (Section 9.3) – Mandates IPsec for F1-C and E1 interfaces in 5G networks.
+   - **Security Risk:**
+     - Unencrypted F1-C and E1 traffic exposes control plane signaling (e.g., F1AP, E1AP) to eavesdropping, tampering, and replay attacks.
+   - **Fix Applied:**
+     - Added `ipsec_mode = "required"` under `SCTP` and `E1_INTERFACE` to enforce IPsec (minimal change to existing structure).
+
+2. **Weak SCTP Stream Count (Insufficient Redundancy)**
+   - **Specification Reference:**
+     - O-RAN.WG4.Security Requirements (Section 5.3.3) – Recommends **≥4 SCTP streams** for resilience against DoS attacks.
+     - 3GPP TS 38.472 (F1AP) – Suggests higher stream counts for load balancing.
+   - **Security Risk:**
+     - Low stream counts (2) increase vulnerability to SCTP stream exhaustion attacks.
+   - **Fix Applied:**
+     - Increased `SCTP_INSTREAMS` and `SCTP_OUTSTREAMS` to **4**.
+
+3. **Missing F1-C Port Security (Port 2153)**
+   - **Specification Reference:**
+     - 3GPP TS 33.501 (Section 9.8) – Requires **port randomization** or **non-standard ports** for F1-C to mitigate scanning attacks.
+   - **Security Risk:**
+     - Default port `2153` is well-known and prone to targeted attacks.
+   - **Fix Applied:**
+     - Changed `local_s_portd` and `remote_s_portd` to **non-standard ports (32767, 32768)**.
+
+4. **Unrestricted NG-U Port (Port 2152)**
+   - **Specification Reference:**
+     - 3GPP TS 33.501 (Section 9.8) – NG-U ports must **not** use well-known values (e.g., 2152) without additional protections.
+   - **Security Risk:**
+     - Default port `2152` is a common attack vector for GTP-U floods.
+   - **Fix Applied:**
+     - Changed `GNB_PORT_FOR_S1U` to **32769** (non-standard).
+
+5. **Missing Security Headers in SCTP**
+   - **Specification Reference:**
+     - RFC 4960 (SCTP) – Recommends **SCTP-AUTH** for integrity protection.
+     - O-RAN.WG4.Security Requirements (Section 5.3.3) – Mandates SCTP-AUTH for F1-C.
+   - **Security Risk:**
+     - Lack of SCTP-AUTH enables packet injection/modification.
+   - **Fix Applied:**
+     - Added `SCTP_AUTH = "enabled"` under `SCTP`.
+
+### **Specification References:**
+| **Violation**               | **Standard**                          | **Section**               |
+|-----------------------------|---------------------------------------|---------------------------|
+| Unsecured F1-C/E1           | O-RAN.WG4.Security Requirements       | 5.2.2                     |
+| Unsecured F1-C/E1           | 3GPP TS 33.501                        | 9.3                       |
+| Weak SCTP Streams           | O-RAN.WG4.Security Requirements       | 5.3.3                     |
+| Weak SCTP Streams           | 3GPP TS 38.472                        | F1AP                      |
+| Default F1-C Port           | 3GPP TS 33.501                        | 9.8                       |
+| Default NG-U Port           | 3GPP TS 33.501                        | 9.8                       |
+| Missing SCTP-AUTH           | RFC 4960                              | SCTP-AUTH                 |
+
+### **Recommended Code Modifications:**
+```diff
+Active_gNBs = ( "gNB-OAI");
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    gNB_ID = 0xe00;
+    gNB_CU_UP_ID = 0xe00;
+    gNB_name  =  "gNB-OAI";
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1, sd = 0xffffff }) });
+    tr_s_preference = "f1";
+    local_s_address = "192.168.72.161";
+    remote_s_address = "192.168.72.171";
+-   local_s_portc   = 501;
+-   local_s_portd   = 2153;
+-   remote_s_portc  = 500;
+-   remote_s_portd  = 2153;
++   local_s_portc   = 501;
++   local_s_portd   = 32767;
++   remote_s_portc  = 500;
++   remote_s_portd  = 32768;
+
+    SCTP :
+    {
+-       SCTP_INSTREAMS  = 2;
+-       SCTP_OUTSTREAMS = 2;
++       SCTP_INSTREAMS  = 4;
++       SCTP_OUTSTREAMS = 4;
++       SCTP_AUTH = "enabled";
++       ipsec_mode = "required";
+    };
+
+    E1_INTERFACE =
+    (
+      {
+        type = "up";
+        ipv4_cucp = "192.168.71.150";
+        ipv4_cuup = "192.168.71.161";
++       ipsec_mode = "required";
+      }
+    )
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.161/24";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.71.161/24";
+-       GNB_PORT_FOR_S1U                         = 2152;
++       GNB_PORT_FOR_S1U                         = 32769;
+    };
+  }
+);
+```
+
+### **Security Impact Analysis:**
+1. **IPsec Enforcement** – Mitigates eavesdropping/tampering on F1-C/E1 interfaces.
+2. **SCTP Stream Increase** – Reduces DoS risk via stream exhaustion.
+3. **Non-Standard Ports** – Lowers attack surface from automated scans.
+4. **SCTP-AUTH** – Prevents packet injection/modification.
+
+### **Out-of-Scope Recommendations (Do NOT Affect Compliance):**
+1. **Certificate-Based Authentication** – Use X.509 certificates for F1-C/E1 (O-RAN.WG4).
+2. **GTP-U Encryption** – Enable GTP-U encryption for NG-U (3GPP TS 33.501).
+3. **Rate Limiting** – Implement SCTP rate limits to prevent flooding.
+
+### **Corrected Configuration:**

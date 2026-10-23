@@ -1,0 +1,308 @@
+=== COMPLIANCE ASSESSMENT ===
+Detection phase - listing all security-relevant fields and values:
+
+1. PLMN: mcc = 222; mnc = 01; mnc_length = 2
+2. Tracking Area Code (TAC): 1 (not 0x0000 or 0xfffe which are reserved)
+3. SCTP Ports: local_s_portc = 501; remote_s_portc = 500; local_s_portd = 2153; remote_s_portd = 2153
+4. GNB_PORT_FOR_S1U = 2152
+5. ciphering_algorithms = ( "nea0" )
+6. integrity_algorithms = ( "nia2", "nia0" )
+7. drb_ciphering = "yes"
+8. drb_integrity = "no"
+
+Check each for compliance against 3GPP TS 33.501 and O-RAN F1 security requirements:
+
+- PLMN MCC=222, MNC=01, MNC length=2: Generally acceptable. No violation cited.
+- TAC=1: Valid, as 0x0000 and 0xfffe are reserved, 1 is acceptable.
+- SCTP ports: Typically SCTP uses ports 500 and 501, ports 2152 and 2153 are known for GTP-U and other transport. The spec states: GNB_PORT_FOR_S1U = 2152 is acceptable.
+- Ciphering algorithms: Only "nea0" listed. "nea0" is the null ciphering algorithm, which means no ciphering. This violates security rules because data should not be unencrypted - the “nea0” is null ciphering and should not be the sole preferred ciphering algorithm.
+- Integrity algorithms: "nia2", "nia0" - "nia0" is null integrity algorithm (no integrity), which is insecure. The presence of "nia0" should be disallowed as preferred.
+- DRB ciphering = "yes" is good.
+- DRB integrity = "no" is a violation as integrity protection for DRB should not be disabled.
+- Summary of violations:
+  - Ciphering algorithms list contains only "nea0" (null ciphering)
+  - Integrity algorithms list contains "nia0" (null integrity), and DRB integrity protection is disabled "no".
+
+Specifications:
+- 3GPP TS 33.501 mandates using at least one non-null ciphering and integrity algorithm.
+- O-RAN F1 interface requires control plane and user plane integrity and confidentiality protection.
+- Null ciphering (nea0) and null integrity (nia0) are insecure.
+
+Security Risk:
+- Using null ciphering or integrity allows data interception and manipulation.
+- Disabling DRB integrity disables protection on data radio bearers, potentially allowing spoofing or data tampering.
+
+Recommended minimal fixes:
+- Replace preferred ciphering algorithm "nea0" with a strong algorithm such as "nea2" (128-bit AES).
+- Remove "nia0" from preferred integrity algorithms, retain "nia2".
+- Enable DRB integrity protection by setting drb_integrity = "yes".
+
+No changes needed for PLMN, TAC, SCTP ports, DRB ciphering (already "yes").
+
+Revised configuration snippet for security section:
+
+security = {
+  ciphering_algorithms = ( "nea2" );
+  integrity_algorithms = ( "nia2" );
+  drb_ciphering = "yes";
+  drb_integrity = "yes";
+};
+
+All other configuration lines remain unchanged.
+
+Verification:
+- New ciphering algorithm "nea2" is valid and secure per TS 33.501.
+- Integrity algorithms only "nia2", valid non-null.
+- DRB integrity enabled.
+- No other changes.
+
+Compliance Status: Non-Compliant (since fixes applied).
+
+Out-of-Scope Recommendations:
+- Enable transport layer security (TLS) or IPsec for SCTP.
+- Use secure certificates and key management for the gNB.
+- Implement replay protection mechanisms.
+- Enhance logging levels during troubleshooting.
+
+Compliance Status: Non-Compliant  
+Violations Found:
+- Use of null ciphering algorithm "nea0" as preferred.
+- Inclusion of null integrity algorithm "nia0" in the list.
+- DRB integrity protection disabled (drb_integrity = "no").
+
+Specification References:
+- 3GPP TS 33.501 clauses 5.3.9, 9.2, 9.4
+- O-RAN F1 interface security requirements
+- 3GPP TS 33.523 F1 interface control plane data protection
+
+Recommended Code Modifications:
+- Change ciphering_algorithms to use a non-null algorithm e.g. "nea2".
+- Remove "nia0" from integrity_algorithms, leave only valid algorithms like "nia2".
+- Set drb_integrity = "yes".
+
+Security Impact Analysis:
+- Fixing these parameters ensures confidentiality and integrity of control and user plane data over the F1 interface.
+- Prevents exposure to eavesdropping, tampering, and replay attacks on radio bearer data.
+- Aligns with mandatory 3GPP and O-RAN security standards to protect network and user data.
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection phase - Security relevant fields and values:
+- gNB_ID = 0xe00
+- tracking_area_code = 1
+- plmn_list: mcc = 222; mnc = 01; mnc_length = 2
+- nr_cellid = 12345678L
+- local_s_address = "127.0.0.4"
+- remote_s_address = "127.0.0.5"
+- local_s_portc = 501
+- local_s_portd = 2153
+- remote_s_portc = 500
+- remote_s_portd = 2153
+- SCTP streams: SCTP_INSTREAMS=2, SCTP_OUTSTREAMS=2
+- amf_ip_address = 172.21.16.137
+- NETWORK_INTERFACES:
+  - GNB_IPV4_ADDRESS_FOR_NG_AMF = 172.21.16.109
+  - GNB_IPV4_ADDRESS_FOR_NGU = 172.21.16.109
+  - GNB_PORT_FOR_S1U = 2152
+- Security:
+  - ciphering_algorithms = ( "nea0" )
+  - integrity_algorithms = ( "nia2", "nia0" )
+  - drb_ciphering = "yes"
+  - drb_integrity = "no"
+
+Now to check the compliance of these values:
+
+1. Ciphering algorithms:
+   - "nea0" is null ciphering, which means no encryption.
+   - According to 3GPP TS 33.501, using "nea0" alone is not secure because it provides no encryption.
+   - Recommended algorithms are nea1, nea2, or nea3 for encryption.
+2. Integrity algorithms:
+   - "nia2" and "nia0" present.
+   - "nia0" is no integrity protection.
+   - Using "nia0" makes integrity protection partially disabled.
+3. DRB security:
+   - drb_ciphering = "yes" (ciphering enabled for DRBs) - compliant.
+   - drb_integrity = "no" (integrity disabled for DRBs) - violates recommended security as integrity protection on DRBs should be enabled for data protection.
+4. Ports:
+   - local_s_portc = 501, remote_s_portc = 500
+     - Port 500 is used by IKE (IPsec Key Exchange), should typically avoid conflicts.
+     - SCTP port numbers should ideally be above 1024 as a best practice.
+   - local_s_portd = 2153, remote_s_portd = 2153, and GNB_PORT_FOR_S1U=2152 is standard.
+5. tracking_area_code=1:
+   - 0x0000 and 0xfffe are reserved, 1 is allowed.
+6. plmn_list:
+   - mcc=222, mnc=01, mnc_length=2 looks valid (MNC must be correctly defined).
+7. SCTP streams:
+   - Minimum streams of 2 is generally allowed, assumed compliant.
+8. IP addresses using 127.0.0.x loopback addresses in local_s_address and remote_s_address may be for testing, but not necessarily a violation.
+9. nr_cellid=12345678L - no reference found in standards for invalidity.
+
+Summary of violations:
+- ciphering_algorithms = ("nea0") uses null ciphering only. Violates encryption requirement.
+- integrity_algorithms include "nia0" (no integrity), better to only allow actual integrity algorithms.
+- drb_integrity = "no" disables integrity for data radio bearers, reduces security.
+- Use of reserved SCTP ports 500 and 501 is questionable; ports below 1024 are privileged ports, should use ports above 1024 to avoid conflicts.
+
+Spec references:
+- 3GPP TS 33.501 Section 5.11: Defines encryption and integrity algorithms.
+- 3GPP TS 23.003: Defines reserved tracking area codes.
+- Best security practices recommend enabling integrity protection alongside ciphering on DRBs.
+- SCTP port ranges: ephemeral ports > 1024 recommended.
+
+Recommended fixes:
+- Change ciphering_algorithms to a secure algorithm, e.g., "nea2".
+- Remove "nia0" from integrity_algorithms list, use only secure algorithms like "nia2".
+- Enable drb_integrity = "yes" to ensure integrity protection on DRBs.
+- Change local_s_portc from 501 and remote_s_portc from 500 to ports >1024, e.g., 5000 and 5001, to avoid privileged port clashes.
+
+Security impact:
+- Null ciphering disables confidentiality, allowing eavesdropping.
+- No integrity on DRBs allows undetected data manipulation.
+- Usage of privileged SCTP ports risks conflicts with other system services.
+
+Minimal changes needed:
+1. ciphering_algorithms = ("nea2")
+2. integrity_algorithms = ("nia2")
+3. drb_integrity = "yes"
+4. local_s_portc=5000
+5. remote_s_portc=5001
+
+These are minimal, preserving format and original config.
+
+Compliance Status: Non-Compliant
+
+Violations Found:
+- Null ciphering algorithm ("nea0") used; insecure.
+- Integrity algorithms include "nia0" (no protection); insecure.
+- DRB integrity protection disabled.
+- Use of SCTP ports 500 and 501 (privileged ports); risk of conflict.
+
+Specification References:
+- 3GPP TS 33.501 Section 5.11.
+- 3GPP TS 23.003 (tracking area codes).
+- Best practices for SCTP ports (avoid ports <1024).
+
+Recommended Code Modifications:
+- Change ciphering_algorithms to "nea2".
+- Change integrity_algorithms to only "nia2".
+- Set drb_integrity to "yes".
+- Change SCTP ports local_s_portc and remote_s_portc to 5000 and 5001 respectively.
+
+Security Impact Analysis:
+- Null ciphering allows data to be transmitted unencrypted, risking confidentiality.
+- Disabling integrity on DRBs permits undetected data tampering.
+- Using privileged SCTP ports risks interference with other critical services.
+
+Out-of-Scope Recommendations:
+- Implement TLS/IPsec for transport security.
+- Use certificates for CU authentication.
+- Consider stronger ciphering and integrity algorithms based on deployment.
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection phase - security-relevant fields and values explicitly present:
+
+- gNB_ID: 0xe00
+- tracking_area_code: 1 (not 0x0000 or 0xfffe)
+- plmn_list: mcc = 222, mnc = 01, mnc_length = 2, snssaiList = ({ sst = 1, sd = 0xffffff })
+- local_s_address: "127.0.0.4"
+- remote_s_address: "127.0.0.5"
+- local_s_portc: 501
+- local_s_portd: 2153
+- remote_s_portc: 500
+- remote_s_portd: 2153
+- SCTP_INSTREAMS = 2
+- SCTP_OUTSTREAMS = 2
+- amf_ip_address = { ipv4 = "172.21.16.137" }
+- GNB_IPV4_ADDRESS_FOR_NG_AMF = "172.21.16.109"
+- GNB_IPV4_ADDRESS_FOR_NGU = "172.21.16.109"
+- GNB_PORT_FOR_S1U = 2152
+- security ciphering_algorithms = ("nea0")
+- security integrity_algorithms = ("nia2", "nia0")
+- drb_ciphering = "yes"
+- drb_integrity = "no"
+
+Analysis for each:
+
+1. Plmn MCC and MNC:
+   - mcc = 222, mnc = 01, mnc_length = 2
+   - MNC length 2 is valid (the config flags it correctly)
+   - No known standard violation here.
+
+2. SCTP ports:
+   - local_s_portc = 501, remote_s_portc = 500
+   - local_s_portd = 2153, remote_s_portd = 2153
+   - According to 3GPP TS 38.472 and general SCTP usage for F1/F1-U:
+     - Port 500 is IKE standard port, it’s unusual for SCTP control ports.
+     - SCTP for F1 AP normally uses ports in dynamic/private port range (49152-65535) or as assigned.
+     - 2153 is the standard UDP port for GTP-U, relevant for F1-U user plane.
+   - The local_s_portc = 501 and remote_s_portc = 500 are questionable as SCTP ports. Usually SCTP ports for F1-C should be consistent and in allowed ranges.
+   - From the knowledge base: ports should be valid SCTP ports. 500 and 501 are well-known system ports, may not be appropriate.
+   
+3. Ciphering algorithms:
+   - Ciphering chosen: "nea0"
+   - Valid values: nea0, nea1, nea2, nea3
+   - But nea0 means no encryption (null cipher)
+   - Security best practice: Use a cipher with encryption capability.
+   - From 3GPP TS 33.401 and O-RAN recommendations, nea0 = no ciphering, which is insecure.
+   - Risk: No encryption of user data.
+
+4. Integrity algorithms:
+   - integrity_algorithms = ("nia2", "nia0")
+   - nia0 means no integrity protection, nia2 is a valid algorithm.
+   - According to standards, preference list should not put nia0 (no integrity) as second if drb_integrity is "no" meaning not enforced.
+   - drb_integrity = "no", meaning integrity protection on DRBs disabled — this is a direct security risk.
+
+5. drb_integrity = "no"
+   - Disabling integrity on DRBs violates 3GPP security, where user data integrity protection should be enabled.
+   - Risk: Potential manipulation/loss of integrity in radio bearer data.
+
+6. local_s_address and remote_s_address:
+   - Both set to loopback (127.0.0.x) which is valid for test, but may be out-of-scope for security.
+   - No direct violation in config presence.
+
+Violations Found:
+
+1. Ciphering algorithm "nea0" (null cipher) in preference is insecure.  
+2. drb_integrity set to "no" disabling integrity protection on user DRBs violates security requirements.  
+3. SCTP control ports set to 500 and 501, which are system/reserved ports and not recommended for SCTP control (F1-C).  
+4. Integrity algorithms preference includes "nia0" (no integrity), which should be removed or reordered to avoid no integrity.  
+
+Specification References:
+
+- 3GPP TS 33.401 for ciphering and integrity algorithm usage.  
+- 3GPP TS 38.472 and TS 38.300 for SCTP port and DRB security requirements.  
+- O-RAN WG11 Threat Modeling and Security Requirements documents.  
+
+Recommended Code Modifications:
+
+1. Change ciphering_algorithms from ("nea0") to a secure algorithm like "nea2" (AES based).  
+2. Change drb_integrity from "no" to "yes" to enable integrity protection.  
+3. Change SCTP local and remote control ports to recommended private/dynamic ports (e.g., 36412 or 36422 or another valid port) instead of 500 and 501. Since minimal change, adjust ports to 36412 and 36422.  
+4. Change integrity_algorithms to remove "nia0" or reorder preference as ("nia2") only, no zero integrity.  
+
+Security Impact Analysis:
+
+- Using "nea0" disables encryption, exposing data to eavesdropping, violating confidentiality.  
+- Disabling DRB integrity protection allows data tampering without detection.  
+- Using reserved SCTP ports (500,501) risks conflicts and potential vulnerabilities.  
+- Allowing "nia0" (no integrity) risks acceptance of unprotected data.  
+
+Out-of-Scope Recommendations:
+
+- Enable TLS/DTLS or other higher-layer encryption.  
+- Use secure PKI and key management as per O-RAN security guides.  
+- Use valid non-loopback addresses in deployment.  
+- Harden access controls and configuration change prevention.
+
+Now applying minimal fixes and returning full corrected configuration with compliance status Non-Compliant due to applied fixes.
+
+
+
+Compliance Status: Non-Compliant  
+Violations Found: Ciphering algorithm was insecure (nea0), DRB integrity was disabled (drb_integrity=no), SCTP control ports used reserved ports 500/501, integrity_algorithms included no integrity (nia0).  
+Specification References: 3GPP TS 33.401, 3GPP TS 38.472, O-RAN WG11 security documents.  
+Recommended Code Modifications: As applied above.  
+Security Impact Analysis: Confidentiality, integrity protection restored, and compliance with SCTP port usage for control and data separation ensured.  
+Out-of-Scope Recommendations: Enable TLS/DTLS transports, strengthen key and certificate management.

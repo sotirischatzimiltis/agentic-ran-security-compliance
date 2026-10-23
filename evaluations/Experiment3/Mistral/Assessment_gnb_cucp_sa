@@ -1,0 +1,416 @@
+=== COMPLIANCE ASSESSMENT ===
+### **Detection Phase: Security-Relevant Fields Analysis**
+
+The following security-relevant fields were identified in the `gnb-cucp.sa.f1.conf` configuration file:
+
+| **Field**                     | **Value**                     | **Relevance**                                                                 |
+|-------------------------------|-------------------------------|------------------------------------------------------------------------------|
+| `ciphering_algorithms`        | `("nea0")`                    | Governs confidentiality protection for RRC and user data.                   |
+| `integrity_algorithms`        | `("nia2", "nia0")`            | Governs integrity protection for RRC and user data.                         |
+| `drb_ciphering`               | `"yes"`                       | Enables/disables ciphering for Data Radio Bearers (DRBs).                   |
+| `drb_integrity`               | `"no"`                        | Enables/disables integrity protection for DRBs.                             |
+| `tracking_area_code`          | `1`                           | Must not use reserved values (`0x0000`, `0xfffe`).                          |
+| `plmn_list`                   | `mcc = 208; mnc = 99; mnc_length = 2` | Valid MCC/MNC combination (no violation detected).                          |
+| `local_s_portc`               | `501`                         | F1-C port (control plane).                                                  |
+| `remote_s_portc`              | `500`                         | F1-C port (control plane).                                                  |
+| `local_s_portd`               | `2152`                        | F1-U port (user plane).                                                     |
+| `remote_s_portd`              | `2152`                        | F1-U port (user plane).                                                     |
+| `SCTP_INSTREAMS`              | `2`                           | SCTP parameter for F1-C interface.                                          |
+| `SCTP_OUTSTREAMS`             | `2`                           | SCTP parameter for F1-C interface.                                          |
+
+### **Violations Found**
+
+#### **1. Ciphering Algorithm (`nea0`)**
+- **Current Value**: `("nea0")`
+- **Specification Reference**:
+  - **3GPP TS 33.501 V17.6.0 (2023-12)** explicitly states that **`nea0` (NULL ciphering) is prohibited for use in 5G except for unauthenticated IMS emergency sessions**.
+  - **O-RAN.WG4.Security Requirements** mandate that **confidentiality protection should be used whenever regulations permit**.
+- **Security Risk**:
+  - **`nea0` provides no encryption**, leaving RRC and user data exposed to eavesdropping, tampering, and replay attacks.
+  - Violates **3GPP and O-RAN security best practices** for confidentiality protection.
+- **Fix Required**:
+  - Replace `nea0` with a **strong ciphering algorithm** (`nea1`, `nea2`, or `nea3`).
+
+#### **2. Integrity Algorithm (`nia0`)**
+- **Current Value**: `("nia2", "nia0")`
+- **Specification Reference**:
+  - **3GPP TS 33.501 V17.6.0 (2023-12)** prohibits the use of **`nia0` (NULL integrity) for 5G NAS and AS security contexts**.
+  - **Exception**: Only allowed for **unauthenticated IMS emergency sessions**.
+- **Security Risk**:
+  - **`nia0` provides no integrity protection**, allowing attackers to **modify, inject, or replay** RRC and user data without detection.
+  - Violates **3GPP and O-RAN integrity requirements**.
+- **Fix Required**:
+  - Remove `nia0` from the list of preferred integrity algorithms.
+
+#### **3. DRB Integrity (`drb_integrity = "no"`)**
+- **Current Value**: `"no"`
+- **Specification Reference**:
+  - **3GPP TS 33.501 V17.6.0 (2023-12)** mandates that **DRB integrity protection must be enabled** if the **SMF enforces UP integrity protection**.
+  - **O-RAN.WG4.Security Requirements** align with 3GPP, requiring **integrity protection for DRBs** unless explicitly exempted.
+- **Security Risk**:
+  - **Disabling DRB integrity** allows attackers to **modify, inject, or replay** user plane data without detection.
+  - Violates **3GPP and O-RAN security requirements** for user plane protection.
+- **Fix Required**:
+  - Set `drb_integrity = "yes"`.
+
+#### **4. F1-C Port Numbers (`local_s_portc = 501`, `remote_s_portc = 500`)**
+- **Current Value**:
+  - `local_s_portc = 501`
+  - `remote_s_portc = 500`
+- **Specification Reference**:
+  - **3GPP TS 38.472 V16.2.0 (2021-06)** and **IANA** assign **port `38472`** for **F1-C (SCTP)**.
+  - **O-RAN.WG4** aligns with 3GPP for **F1-C port requirements**.
+- **Security Risk**:
+  - Using **non-standard ports** may expose the interface to **unauthorized access, scanning, or attacks**.
+  - Violates **3GPP and O-RAN port assignment requirements**.
+- **Fix Required**:
+  - Update `local_s_portc` and `remote_s_portc` to **`38472`**.
+
+#### **5. F1-U Port Number (`local_s_portd = 2152`, `remote_s_portd = 2152`)**
+- **Current Value**:
+  - `local_s_portd = 2152`
+  - `remote_s_portd = 2152`
+- **Specification Reference**:
+  - **3GPP TS 38.414 V16.3.0 (2021-03)** assigns **port `2152` for NG-U (GTP-U)**, but **F1-U (GTP-U) should also use `2152`**.
+  - **O-RAN.WG4** aligns with 3GPP for **F1-U port requirements**.
+- **Compliance Status**:
+  - **Compliant** (no change required).
+
+#### **6. Tracking Area Code (`tracking_area_code = 1`)**
+- **Current Value**: `1`
+- **Specification Reference**:
+  - **3GPP TS 23.003 V17.4.0 (2023-12)** reserves **`0x0000` and `0xfffe`** for special use.
+- **Compliance Status**:
+  - **Compliant** (no change required).
+
+#### **7. SCTP Streams (`SCTP_INSTREAMS = 2`, `SCTP_OUTSTREAMS = 2`)**
+- **Current Value**:
+  - `SCTP_INSTREAMS = 2`
+  - `SCTP_OUTSTREAMS = 2`
+- **Specification Reference**:
+  - **3GPP TS 38.472 V16.2.0 (2021-06)** recommends **at least 2 streams** for F1-C.
+- **Compliance Status**:
+  - **Compliant** (no change required).
+
+### **Fixing Phase: Corrected Configuration**
+
+#### **Changes Applied**
+1. **Ciphering Algorithms**:
+   - **Before**: `ciphering_algorithms = ( "nea0" );`
+   - **After**: `ciphering_algorithms = ( "nea2", "nea1" );`
+     *(`nea2` is prioritized as it is AES-based, which is widely recommended.)*
+
+2. **Integrity Algorithms**:
+   - **Before**: `integrity_algorithms = ( "nia2", "nia0" );`
+   - **After**: `integrity_algorithms = ( "nia2", "nia1" );`
+     *(Removed `nia0` to comply with 3GPP and O-RAN requirements.)*
+
+3. **DRB Integrity**:
+   - **Before**: `drb_integrity = "no";`
+   - **After**: `drb_integrity = "yes";`
+     *(Enabled DRB integrity to comply with 3GPP and O-RAN requirements.)*
+
+4. **F1-C Port Numbers**:
+   - **Before**:
+     ```
+     local_s_portc   = 501;
+     remote_s_portc  = 500;
+     ```
+   - **After**:
+     ```
+     local_s_portc   = 38472;
+     remote_s_portc  = 38472;
+     ```
+     *(Updated to the **3GPP-assigned port** for F1-C.)*
+
+### **Verification Phase**
+- Re-scanned the corrected configuration and confirmed that all violations were addressed:
+  1. **`nea0` removed** and replaced with `nea2` and `nea1`.
+  2. **`nia0` removed** from integrity algorithms.
+  3. **`drb_integrity` enabled**.
+  4. **F1-C ports updated** to `38472`.
+
+### **Security Impact Analysis**
+| **Violation**               | **Security Risk**                                                                 | **Impact of Fix**                                                                 |
+|-----------------------------|---------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| **`nea0` (NULL ciphering)** | No encryption → **eavesdropping, tampering, replay attacks**.                   | Enables **confidentiality protection** for RRC and user data.                   |
+| **`nia0` (NULL integrity)** | No integrity → **data modification, injection, replay attacks**.                | Enables **integrity protection** for RRC and user data.                         |
+| **`drb_integrity = "no"`**  | No DRB integrity → **user plane data modification, injection, replay attacks**. | Enables **integrity protection** for DRBs, aligning with 3GPP and O-RAN.        |
+| **Non-standard F1-C ports** | Unauthorized access → **scanning, attacks on non-standard ports**.              | Uses **3GPP-assigned port**, reducing exposure to unauthorized access.           |
+
+### **Out-of-Scope Recommendations**
+1. **TLS for F1-C**:
+   - **Recommendation**: Enable **TLS 1.2+** for F1-C to protect control plane signaling.
+   - **Reason**: Not explicitly present in the configuration, so **out-of-scope** for this assessment.
+
+2. **IPsec for F1-U**:
+   - **Recommendation**: Enable **IPsec (IKEv2 + ESP)** for F1-U to protect user plane data.
+   - **Reason**: Not explicitly present in the configuration, so **out-of-scope** for this assessment.
+
+3. **Certificate-Based Authentication**:
+   - **Recommendation**: Use **X.509 certificates** for mutual authentication between CU-CP and DU.
+   - **Reason**: Not explicitly present in the configuration, so **out-of-scope** for this assessment.
+
+4. **Hardening SCTP Parameters**:
+   - **Recommendation**: Configure **SCTP heartbeat intervals, cookie lifetimes, and retransmission timers** to mitigate DoS attacks.
+   - **Reason**: Not explicitly present in the configuration, so **out-of-scope** for this assessment.
+
+### **Final Compliance Status**
+**Non-Compliant** *(Violations were found and fixed.)*
+
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+### **Detection Phase**
+The following security-relevant fields were identified in the `gnb-cucp.sa.f1.conf` configuration file:
+
+1. **Ciphering Algorithms**:
+   - `ciphering_algorithms = ( "nea0" );`
+2. **Integrity Algorithms**:
+   - `integrity_algorithms = ( "nia2", "nia0" );`
+3. **DRB Security Flags**:
+   - `drb_ciphering = "yes";`
+   - `drb_integrity = "no";`
+4. **PLMN and TAC**:
+   - `tracking_area_code = 1;`
+   - `plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1 }, { sst = 2 }, { sst = 3 }) });`
+5. **SCTP Parameters**:
+   - `SCTP_INSTREAMS = 2;`
+   - `SCTP_OUTSTREAMS = 2;`
+6. **F1AP Ports**:
+   - `local_s_portc = 501;`
+   - `remote_s_portc = 500;`
+   - `local_s_portd = 2152;`
+   - `remote_s_portd = 2152;`
+7. **gNB-ID**:
+   - `gNB_ID = 0xe00;`
+
+### **Violations Found**
+
+#### **1. Ciphering Algorithms**
+- **Field**: `ciphering_algorithms = ( "nea0" );`
+- **Violation**:
+  - **`nea0` (Null ciphering) is explicitly prohibited for user data and RRC-signalling in 3GPP TS 33.501 and O-RAN.WG4 security requirements** unless regulations explicitly forbid ciphering.
+  - **Security Risk**: Using `nea0` disables confidentiality protection, exposing user data and signalling to eavesdropping and tampering.
+- **Specification Reference**:
+  - 3GPP TS 33.501 V17.6.0, Section 5.3.2: *"Confidentiality protection should be used whenever regulations permit."*
+  - O-RAN.WG4: *"The gNB shall support ciphering of user data and RRC-signalling."*
+
+#### **2. Integrity Algorithms**
+- **Field**: `integrity_algorithms = ( "nia2", "nia0" );`
+- **Violation**:
+  - **`nia0` (Null integrity) is explicitly prohibited for signalling and user data in 3GPP TS 33.501** unless regulations explicitly forbid integrity protection.
+  - **Security Risk**: Using `nia0` disables integrity protection, exposing signalling and user data to tampering and replay attacks.
+- **Specification Reference**:
+  - 3GPP TS 33.501 V17.6.0, Section 5.11.1.2: *"Integrity protection is mandatory for all signalling and user data."*
+
+#### **3. DRB Integrity**
+- **Field**: `drb_integrity = "no";`
+- **Violation**:
+  - **DRB integrity protection is mandatory for all DRBs** if the User Plane Security Enforcement policy requires it (3GPP TS 33.501).
+  - **Security Risk**: Disabling DRB integrity exposes user plane data to tampering and injection attacks.
+- **Specification Reference**:
+  - 3GPP TS 33.501 V17.6.0, Section 5.11.1: *"All DRBs belonging to a PDU session for which the User Plane Security Enforcement information indicates that UP integrity protection is required shall be configured with integrity protection."*
+
+### **Fixing Phase**
+
+#### **1. Ciphering Algorithms**
+- **Fix**: Remove `nea0` from the list and replace it with a valid ciphering algorithm (e.g., `nea2`).
+- **Correction**:
+  ```diff
+  - ciphering_algorithms = ( "nea0" );
+  + ciphering_algorithms = ( "nea2" );
+  ```
+
+#### **2. Integrity Algorithms**
+- **Fix**: Remove `nia0` from the list and ensure only valid integrity algorithms are used.
+- **Correction**:
+  ```diff
+  - integrity_algorithms = ( "nia2", "nia0" );
+  + integrity_algorithms = ( "nia2" );
+  ```
+
+#### **3. DRB Integrity**
+- **Fix**: Enable DRB integrity protection.
+- **Correction**:
+  ```diff
+  - drb_integrity = "no";
+  + drb_integrity = "yes";
+  ```
+
+### **Verification Phase**
+- Re-scanned the corrected configuration:
+  - `nea0` removed from `ciphering_algorithms`.
+  - `nia0` removed from `integrity_algorithms`.
+  - `drb_integrity` set to `"yes"`.
+- All violations are resolved.
+
+### **Security Impact Analysis**
+1. **Ciphering Algorithms**:
+   - **Impact of Fix**: Enabling `nea2` ensures confidentiality protection for user data and RRC-signalling, mitigating eavesdropping risks.
+2. **Integrity Algorithms**:
+   - **Impact of Fix**: Removing `nia0` ensures integrity protection for signalling and user data, mitigating tampering and replay attacks.
+3. **DRB Integrity**:
+   - **Impact of Fix**: Enabling DRB integrity ensures user plane data integrity, mitigating tampering and injection attacks.
+
+### **Out-of-Scope Recommendations**
+1. **TLS/IPsec for F1AP**:
+   - Recommend enabling TLS or IPsec for F1AP traffic between CU-CP and DU to protect control plane signalling.
+2. **Certificate-Based Authentication**:
+   - Recommend implementing certificate-based authentication for CU-CP and DU communication.
+3. **SCTP Authentication**:
+   - Recommend enabling SCTP authentication chunks (RFC 4895) for SCTP associations.
+
+### **Compliance Status**
+**Non-Compliant** (Violations were found and fixed.)
+
+
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+### **Detection Phase**
+The following security-relevant fields were identified in the `gnb-cucp.sa.f1.conf` configuration file:
+
+1. **Ciphering Algorithms**: `ciphering_algorithms = ( "nea0" )`
+2. **Integrity Algorithms**: `integrity_algorithms = ( "nia2", "nia0" )`
+3. **DRB Ciphering**: `drb_ciphering = "yes"`
+4. **DRB Integrity**: `drb_integrity = "no"`
+5. **Tracking Area Code (TAC)**: `tracking_area_code = 1`
+6. **SCTP Streams**: `SCTP_INSTREAMS = 2`, `SCTP_OUTSTREAMS = 2`
+7. **F1AP Ports**: `local_s_portc = 501`, `remote_s_portc = 500`, `local_s_portd = 2152`, `remote_s_portd = 2152`
+
+### **Violations Found**
+
+#### **1. Ciphering Algorithms**
+- **Field**: `ciphering_algorithms = ( "nea0" )`
+- **Violation**:
+  - `nea0` is the **NULL ciphering algorithm**, which provides **no encryption** for user or control plane traffic.
+  - **3GPP TS 33.501** explicitly states that `nea0` **must not** be used unless explicitly required for regulatory or testing purposes. It must **never** be the **only** algorithm in the list.
+  - **Security Risk**: Using `nea0` exposes all traffic to eavesdropping and tampering.
+- **Specification Reference**:
+  - 3GPP TS 33.501, Clause 5.3.2, 6.7.3.0, and Annex Z.
+  - O-RAN.WG4.SecurityRequirements.
+
+#### **2. Integrity Algorithms**
+- **Field**: `integrity_algorithms = ( "nia2", "nia0" )`
+- **Violation**:
+  - `nia0` is the **NULL integrity algorithm**, which provides **no integrity protection** for user or control plane traffic.
+  - **3GPP TS 33.501** states that `nia0` **must not** be used unless explicitly required for regulatory or testing purposes. It must **never** be included in the list of allowed algorithms unless absolutely necessary.
+  - **Security Risk**: Using `nia0` exposes all traffic to tampering and replay attacks.
+- **Specification Reference**:
+  - 3GPP TS 33.501, Clause 5.3.2, 6.7.3.0, and Annex Z.
+  - O-RAN.WG4.SecurityRequirements.
+
+#### **3. DRB Integrity**
+- **Field**: `drb_integrity = "no"`
+- **Violation**:
+  - **3GPP TS 33.501** mandates that **DRB integrity protection must be enabled** for all DRBs unless explicitly exempted by regulatory requirements.
+  - **Security Risk**: Disabling DRB integrity exposes user plane traffic to tampering and replay attacks.
+- **Specification Reference**:
+  - 3GPP TS 33.501, Clause 5.3.3, 6.6.2, and 6.7.4.
+
+#### **4. Tracking Area Code (TAC)**
+- **Field**: `tracking_area_code = 1`
+- **Violation**:
+  - **3GPP TS 23.003** reserves `0x0000` and `0xfffe` for special purposes. While `1` is not explicitly reserved, **TAC values must be unique and managed by the operator** to avoid conflicts.
+  - **No direct security risk**, but misconfiguration can lead to operational issues.
+- **Specification Reference**:
+  - 3GPP TS 23.003, Clause 9.2.
+
+### **Fields Deemed Compliant**
+1. **DRB Ciphering**: `drb_ciphering = "yes"` → **Compliant** (enabled).
+2. **SCTP Streams**: `SCTP_INSTREAMS = 2`, `SCTP_OUTSTREAMS = 2` → **Compliant** (within recommended limits).
+3. **F1AP Ports**: `local_s_portc = 501`, `remote_s_portc = 500`, `local_s_portd = 2152`, `remote_s_portd = 2152` → **Compliant** (standard ports for F1AP and GTP-U).
+4. **PLMN Configuration**: `mcc = 208`, `mnc = 99`, `mnc_length = 2` → **Compliant** (valid format).
+
+### **Fixing Phase**
+
+#### **1. Ciphering Algorithms**
+- **Fix**: Remove `nea0` as the **only** ciphering algorithm. Replace with a **strong ciphering algorithm** (e.g., `nea2` or `nea1`).
+- **Correction**:
+  ```diff
+  - ciphering_algorithms = ( "nea0" );
+  + ciphering_algorithms = ( "nea2", "nea1" );
+  ```
+
+#### **2. Integrity Algorithms**
+- **Fix**: Remove `nia0` from the list of allowed integrity algorithms.
+- **Correction**:
+  ```diff
+  - integrity_algorithms = ( "nia2", "nia0" );
+  + integrity_algorithms = ( "nia2", "nia1" );
+  ```
+
+#### **3. DRB Integrity**
+- **Fix**: Enable DRB integrity protection.
+- **Correction**:
+  ```diff
+  - drb_integrity = "no";
+  + drb_integrity = "yes";
+  ```
+
+#### **4. Tracking Area Code (TAC)**
+- **Fix**: No change required for compliance, but **operator must ensure uniqueness**.
+
+### **Verification Phase**
+- Re-scanned the corrected configuration:
+  - `nea0` removed from `ciphering_algorithms`.
+  - `nia0` removed from `integrity_algorithms`.
+  - `drb_integrity` enabled.
+  - All other fields remain compliant.
+
+### **Compliance Status**
+**Non-Compliant** (violations were found and fixed).
+
+### **Specification References**
+1. 3GPP TS 33.501, Clauses 5.3.2, 5.3.3, 6.6.2, 6.7.3.0, 6.7.4, and Annex Z.
+2. O-RAN.WG4.SecurityRequirements.
+3. 3GPP TS 23.003, Clause 9.2.
+
+### **Recommended Code Modifications**
+```diff
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+- ciphering_algorithms = ( "nea0" );
++ ciphering_algorithms = ( "nea2", "nea1" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+- integrity_algorithms = ( "nia2", "nia0" );
++ integrity_algorithms = ( "nia2", "nia1" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+- drb_integrity = "no";
++ drb_integrity = "yes";
+};
+```
+
+### **Security Impact Analysis**
+1. **Ciphering Algorithms**:
+   - **Before**: `nea0` exposed all traffic to eavesdropping.
+   - **After**: `nea2` and `nea1` provide **strong encryption** for user and control plane traffic.
+
+2. **Integrity Algorithms**:
+   - **Before**: `nia0` exposed all traffic to tampering and replay attacks.
+   - **After**: `nia2` and `nia1` provide **strong integrity protection**.
+
+3. **DRB Integrity**:
+   - **Before**: Disabled DRB integrity exposed user plane traffic to tampering.
+   - **After**: Enabled DRB integrity ensures **end-to-end protection** of user plane traffic.
+
+### **Out-of-Scope Recommendations**
+1. **Transport Layer Security**:
+   - Enable **IPsec** or **DTLS** for F1-C and E1 interfaces to protect signaling traffic.
+2. **Certificate-Based Authentication**:
+   - Use **X.509 certificates** for mutual authentication between CU-CP, CU-UP, and DU.
+3. **SCTP Authentication**:
+   - Enable **SCTP-AUTH** (RFC 4895) to protect SCTP associations from hijacking and tampering.
+4. **Logging and Monitoring**:
+   - Enable **detailed logging** for security events (e.g., failed integrity checks, ciphering failures).

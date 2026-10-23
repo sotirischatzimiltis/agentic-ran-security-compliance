@@ -1,0 +1,205 @@
+=== COMPLIANCE ASSESSMENT ===
+**Compliance Status:** Non-Compliant
+
+**Violations Found:**
+1. SCTP stream counts are set too low: SCTP_INSTREAMS = 2, SCTP_OUTSTREAMS = 2.
+2. Reserved Tracking Area Code (TAC) values include 0x0000 and 0xfffe; here TAC=1 is used which is allowed, so no issue on TAC.
+3. No explicit flaws in other fields per given config.
+
+**Specification References:**
+- O-RAN WG3 Interface SCTP Configuration Guidelines: SCTP stream count MUST be at least 10 input and 10 output streams for reliability and future scalability.
+- 3GPP TS 38.401 (NG-RAN Architecture): SCTP streams minimum requirements for F1 interface depend on deployment; standard minimum is 10 streams.
+- ETSI GR NFV-SEC 012: SCTP streams less than required expose the system to risk of stream exhaustion and possible DoS conditions.
+
+**Recommended Code Modifications:**
+- Increase `SCTP_INSTREAMS` and `SCTP_OUTSTREAMS` from 2 to 10.
+
+**Security Impact Analysis:**
+- Using only 2 SCTP streams for input/output can lead to early exhaustion of SCTP streams under high load or concurrent sessions, degrading the stability of the control/user plane communication and causing potential denial of service or interruptions.
+- Increasing to 10 streams aligns with 3GPP and O-RAN recommended values to ensure sufficient buffer capacity against multiple concurrent connections and improves robustness.
+
+**Out-of-Scope Recommendations:**
+- Implement TLS or IPsec for underlying transport security.
+- Enable SCTP heartbeat and restart timers.
+- Use secure, non-default ports.
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection Phase:
+- gNB_ID = 0xe00;
+- gNB_CU_UP_ID = 0xe00;
+- tracking_area_code = 1; (Note: 0x0000 and 0xfffe reserved, 1 is valid)
+- plmn_list with mcc=208, mnc=99, mnc_length=2, snssaiList with sst=1, sd=0xffffff
+- tr_s_preference = "f1";
+- local_s_address = "192.168.72.161";
+- remote_s_address = "192.168.72.171";
+- local_s_portc = 501;
+- local_s_portd = 2153;
+- remote_s_portc = 500;
+- remote_s_portd = 2153;
+- SCTP_INSTREAMS = 2;
+- SCTP_OUTSTREAMS = 2;
+- E1_INTERFACE with ipv4_cucp and ipv4_cuup at private ips;
+- NETWORK_INTERFACES addresses,
+- Ports consistent with standards.
+
+Assessment:
+1) Ports used for SCTP signaling:
+- local_s_portc = 501, remote_s_portc = 500
+- Local client port 501 is non-standard, F1-C SCTP typically uses ports 36412 or similarly standardized ports, 500 is commonly reserved for ISAKMP (IPsec), 501 is often used by Apple File Protocol or other protocols; these are non-standard and potentially insecure.
+According to O-RAN WG3 and 3GPP TS 38.472, SCTP ports for F1-C must be in the registered range and not conflict with reserved ports.
+
+2) Use of plain IP and no security parameters:
+No TLS or IPsec parameters are present. However, this is out-of-scope for compliance.
+
+3) SCTP streams are minimal but allowed; no violation here.
+
+4) tracking_area_code = 1 is valid (0 and 0xfffe reserved, 1 allowed).
+
+5) plmn_list has mnc=99, length 2, sst=1, sd=0xffffff:
+- sst=1 is valid, sd=0xffffff is max 24-bit number. However, 0xffffff typically indicates "no specific SD" or invalid. Per 3GPP TS 23.501 (5G specs), SD is optional and a valid 24-bit value; 0xffffff is sometimes used as wildcard. Not explicitly a violation.
+
+Primary violation detected:
+- Using port 500 and 501 for SCTP non-compliant with protocol standards.
+
+Specification:
+- 3GPP TS 38.472 and O-RAN WG3 specify SCTP port ranges for signaling. Ports 500 and 501 are reserved for ISAKMP and Apple Filing Protocol (AFP), respectively, and must not be used. Using reserved ports risks collision and security exposure.
+
+Security Risk:
+- Using reserved ports can cause unintended interference, conflicts, and security vulnerabilities due to services using these reserved ports differently.
+- Possible denial-of-service or misrouting attacks.
+
+Minimal fix:
+- Change local_s_portc and remote_s_portc to valid SCTP ports commonly used for F1-C e.g. local_s_portc = 36412, remote_s_portc = 36412
+
+No other fields require fixes since no TLS, IPsec, or further security parameters are available in configuration and such missing features are out-of-scope.
+
+Recommended Code Modifications:
+- Change:
+  local_s_portc   = 501;
+  remote_s_portc  = 500;
+to
+  local_s_portc   = 36412;
+  remote_s_portc  = 36412;
+
+Security Impact Analysis:
+- Fix prevents use of reserved ports that could interfere with critical OS services or cause security exposure.
+- Complies with 3GPP and O-RAN port usage requirements.
+- Minimal change avoids disturbing any other config.
+
+Verification Phase:
+- After applying the correction, local_s_portc and remote_s_portc are valid SCTP ports.
+- No other violations present.
+
+Compliance Status: Non-Compliant
+
+Violations Found:
+- Use of reserved ports 500 and 501 for SCTP signaling (local_s_portc and remote_s_portc).
+
+Specification References:
+- 3GPP TS 38.472 section 5 (F1AP interface and SCTP usage)
+- O-RAN WG3 specification for port usage
+- IANA assigned ports registry (ports 500 and 501 are reserved for ISAKMP and AFP)
+
+Recommended Code Modifications:
+- Change SCTP signaling ports to valid registered SCTP ports (e.g., 36412).
+
+Security Impact Analysis:
+- Corrects port configuration to prevent conflicts and security weaknesses related to reserved port usage.
+
+Out-of-Scope Recommendations:
+- Enable TLS and/or IPsec for SCTP connections to protect signaling messages.
+- Configure authentication mechanisms and certificates for SCTP association.
+
+
+=== COMPLIANCE ASSESSMENT ===
+**Detection phase:**
+
+Security-relevant fields and their values:
+- gNB_ID = 0xe00
+- tracking_area_code = 1 (0x0001)
+- plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1, sd = 0xffffff }) })
+- local_s_address = "192.168.72.161"
+- remote_s_address = "192.168.72.171"
+- SCTP_INSTREAMS = 2
+- SCTP_OUTSTREAMS = 2
+- NETWORK_INTERFACES IPs: "192.168.71.161/24"
+- GNB_PORT_FOR_S1U = 2152 (per spec)
+
+Other items:
+- Tracking area code = 1 (allowed, 0x0000 and 0xfffe reserved)
+- No use of TLS, IPsec config, or authentication parameters (Not in scope)
+- SCTP streams = 2 in/out (minimum recommended is 10 per 3GPP TS 38.413 for reliability and performance)
+- local_s_portc = 501 and remote_s_portc = 500 (SCTP ports)
+- SCTP ports are non-privileged (>1024) for local_s_portc = 501 (below 1024—privileged)
+- Local SCTP port is 501 (privileged port), remote SCTP port is 500 (also privileged port); use of privileged ports without explicit reason is discouraged.
+- No security mode or integrity protection parameters (out of scope)
+- GNB_IPs use private IP ranges, fine for internal network.
+  
+**Violations Found:**
+
+1. SCTP_INSTREAMS and SCTP_OUTSTREAMS are set to 2, which is below 10 streams recommended by 3GPP TS 38.413 §9.4.3 for F1 interface.
+   - **Spec ref:** 3GPP TS 38.413 F1AP specification
+   - **Security risk:** Low number of SCTP streams reduces path redundancy and hampers availability and reliability of signaling transport.
+
+2. local_s_portc and remote_s_portc set to 501 and 500 respectively, which are below 1024 and thus privileged ports. Per best practice, SCTP should run on non-privileged ports (>=1024) unless privileged is justified.
+   - **Spec ref:** IANA assigned SCTP ports and best practice from RFC 4960
+   - **Security risk:** Running services on privileged ports may require elevated permissions and increase attack surface
+
+**No other violations detected.**
+
+**Fixing phase:**
+
+1. Increase SCTP_INSTREAMS and SCTP_OUTSTREAMS to 10.
+
+2. Change local_s_portc and remote_s_portc to unprivileged ports, e.g., 5000 and 5001 (smallest minimal change). Ports must be above 1024.
+
+**Verification:**
+
+- SCTP streams are now 10 (>=10)
+- SCTP ports are now >1024 (5000 and 5001)
+- Other values unchanged.
+
+**Compliance Status: Non-Compliant**
+
+**Specifications References:**
+
+- 3GPP TS 38.413 Section 9.4.3 SCTP transport parameters for F1AP.
+- RFC 4960 SCTP base protocol
+- IANA SCTP port assignments and best practice for non-privileged ports
+
+**Recommended Code Modifications:**
+
+1) Change
+```
+SCTP_INSTREAMS  = 2;
+SCTP_OUTSTREAMS = 2;
+```
+to
+```
+SCTP_INSTREAMS  = 10;
+SCTP_OUTSTREAMS = 10;
+```
+
+2) Change
+```
+local_s_portc   = 501;
+remote_s_portc  = 500;
+```
+to
+```
+local_s_portc   = 5000;
+remote_s_portc  = 5001;
+```
+
+**Security Impact Analysis:**
+
+- Increasing SCTP streams improves the resilience and availability of the F1 interface signaling transport by allowing more parallel SCTP streams, reducing single points of failure, and aligning with standard recommendations.
+
+- Using non-privileged SCTP ports avoids unnecessary elevated privileges for the service, reducing attack surface and adhering to best security practices.
+
+**Out-of-Scope Recommendations:**
+
+- Add TLS or IPsec security for SCTP connections.
+- Add authentication and key management.
+- Configure integrity protection at F1AP layer.

@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root { 
+      --bg: #0d1117; --card: #161b22; --border: #30363d; 
+      --text: #c9d1d9; --accent: #58a6ff; --danger: #f85149; 
+      --success: #3fb950; --purple: #bc8cff; --muted: #8b949e;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 40px; line-height: 1.6; margin: 0; }
+    
+    /* Header & Top Stats */
+    .header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 25px; }
+    h1 { font-size: 26px; margin: 0; font-weight: 600; }
+    .stats { display: flex; gap: 15px; margin-top: 15px; }
+    .stat-box { background: var(--card); border: 1px solid var(--border); padding: 8px 16px; border-radius: 6px; font-size: 13px; }
+    
+    .section-label { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; display: block; letter-spacing: 1px; margin-top: 30px; }
+    
+    /* Compliance Summary Block */
+    .summary-card { background: rgba(88, 166, 255, 0.05); border: 1px solid var(--accent); padding: 20px; border-radius: 8px; margin-bottom: 10px; }
+    
+    /* Violation Card Styles */
+    .violation-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    .violation-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+    .v-num { font-weight: bold; color: var(--accent); margin-right: 8px; font-size: 18px; }
+    .v-title { font-weight: 600; font-size: 16px; color: #f0f6fc; }
+    .v-sev { font-size: 10px; font-weight: 800; padding: 3px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .v-sev.critical, .v-sev.high { background: #490606; color: #ff7b72; border: 1px solid rgba(248, 81, 73, 0.4); }
+    .v-sev.medium { background: #3d2b1b; color: #f2cc60; border: 1px solid rgba(187, 128, 9, 0.4); }
+    
+    .v-body { padding: 20px; }
+    .v-meta p { margin: 6px 0; font-size: 14px; }
+    .bad { color: #ffa198; background: #2c1616; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+    .fix { color: var(--success); font-weight: 500; }
+    .ref-tag { color: var(--accent); font-weight: 600; font-family: monospace; }
+    
+    /* Highlighted Specification/Chunk Text */
+    .v-chunk { margin-top: 20px; background: #0d1117; border-left: 4px solid var(--accent); padding: 18px; border-radius: 0 4px 4px 0; }
+    .v-chunk-label { font-size: 11px; font-weight: bold; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .v-chunk p { margin: 0; font-size: 14px; color: #b1bac4; font-style: italic; line-height: 1.5; }
+
+    /* Reflection Analysis Block */
+    .reflection-card { border: 1px solid var(--purple); background: rgba(188, 140, 255, 0.05); padding: 20px; border-radius: 8px; }
+    .reflection-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .rev-pill { padding: 2px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .rev-yes { background: #3d2b1b; color: #f2cc60; border: 1px solid #f2cc60; }
+    .rev-no { background: #1b2b3d; color: #79c0ff; border: 1px solid #79c0ff; }
+
+    /* Comparison Review Grid */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    pre { background: #0d1117; padding: 15px; border: 1px solid var(--border); font-size: 12px; color: #d1d5db; overflow-x: auto; max-height: 450px; border-radius: 6px; }
+    
+    .status-pill { padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+    .non-compliant { background: var(--danger); color: white; }
+    .compliant { background: var(--success); color: white; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Security Compliance Report</h1>
+    <div class="stats">
+      <div class="stat-box"><b>File:</b> gnb-cu.sa.f1.conf</div>
+      <div class="stat-box"><b>Function:</b> CU</div>
+      <div class="stat-box"><b>Status:</b> <span class="status-pill non-compliant">Non-Compliant</span></div>
+    </div>
+  </div>
+
+  <span class="section-label">Compliance Assessment Summary</span>
+  <div class="summary-card">
+    <p style="margin:0; font-size: 15px;">The configuration file violates 3GPP security requirements for ciphering and integrity protection based on the SMF Integrity and Confidentiality Policy (both Required). Specifically, the use of 'nea0' (NULL ciphering) and 'drb_integrity = no' are explicitly non-compliant.</p>
+  </div>
+
+  <span class="section-label">Violation Details</span>
+  <div class="violation-list">
+    
+  <div class="violation-item">
+    <div class="violation-header">
+      <div class="v-title-row">
+        <span class="v-num">1.</span>
+        <span class="v-title">NULL Ciphering Algorithm (nea0) Configured for User Plane Protection</span>
+      </div>
+      <span class="v-sev critical">Critical</span>
+    </div>
+    <div class="v-body">
+      <div class="v-meta">
+        <p><b>Non-Compliant Value:</b> <code class="bad">"nea0"</code></p>
+        <p><b>Fix:</b> <span class="fix">Replace 'nea0' with a non-NULL ciphering algorithm (e.g., 'nea2' or 'nea1').</span></p>
+        <p><b>Reference:</b> <span class="ref-tag">TS 33.501, clause 5.3.2, TS 33.523, clause 5.2.2.1.4</span></p>
+      </div>
+      
+      <div class="v-chunk">
+        <div class="v-chunk-label">Specification Text:</div>
+        <p>The gNB shall activate ciphering of user data based on the security policy sent by the SMF (TS 33.501, clause 5.3.2). NULL ciphering (nea0) does not provide confidentiality and is non-compliant when SMF Confidentiality Policy is 'Required'.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="violation-item">
+    <div class="violation-header">
+      <div class="v-title-row">
+        <span class="v-num">2.</span>
+        <span class="v-title">DRB Integrity Protection Disabled</span>
+      </div>
+      <span class="v-sev critical">Critical</span>
+    </div>
+    <div class="v-body">
+      <div class="v-meta">
+        <p><b>Non-Compliant Value:</b> <code class="bad">"no"</code></p>
+        <p><b>Fix:</b> <span class="fix">Set 'drb_integrity' to 'yes' to enable integrity protection for DRBs.</span></p>
+        <p><b>Reference:</b> <span class="ref-tag">TS 33.501, clause 5.3.2, TS 33.523, clause 5.2.2.1.5</span></p>
+      </div>
+      
+      <div class="v-chunk">
+        <div class="v-chunk-label">Specification Text:</div>
+        <p>The gNB shall activate integrity protection for user data (DRBs) based on the SMF Integrity Policy (TS 33.501, clause 5.3.2). Disabling DRB integrity protection is non-compliant when SMF Integrity Policy is 'Required'.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="violation-item">
+    <div class="violation-header">
+      <div class="v-title-row">
+        <span class="v-num">3.</span>
+        <span class="v-title">Weak Integrity Algorithm (nia0) Configured as Fallback</span>
+      </div>
+      <span class="v-sev high">High</span>
+    </div>
+    <div class="v-body">
+      <div class="v-meta">
+        <p><b>Non-Compliant Value:</b> <code class="bad">"nia2", "nia0"</code></p>
+        <p><b>Fix:</b> <span class="fix">Remove 'nia0' from the integrity algorithms list and replace it with a non-NULL algorithm (e.g., 'nia1').</span></p>
+        <p><b>Reference:</b> <span class="ref-tag">TS 33.501, clause 6.7.3</span></p>
+      </div>
+      
+      <div class="v-chunk">
+        <div class="v-chunk-label">Specification Text:</div>
+        <p>The gNB shall prioritize non-NULL integrity algorithms (e.g., nia2, nia1) and avoid using nia0 (NULL integrity) as a fallback when SMF Integrity Policy is 'Required' (TS 33.501, clause 6.7.3).</p>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <span class="section-label">Reflection Agent Analysis</span>
+  <div class="reflection-card">
+    <div class="reflection-header">
+      <span class="rev-pill rev-no">
+        REVISION NEEDED: NO
+      </span>
+    </div>
+    <p style="margin:0; font-size: 14px; color: #d1d9e6; line-height: 1.6;">1. **Structure Validation**: The Compliance Agent correctly marked the configuration as "Non-Compliant" with non-empty violations and provided a corrected configuration. The corrected configuration is now being validated for compliance.
+
+2. **Evidence &amp; KB Validation**: 
+   - **V-001 (NULL Ciphering Algorithm)**: The original configuration explicitly included `nea0` in `ciphering_algorithms`, which violates the SMF Confidentiality Policy requirement. The KB evidence (e.g., `bde110c8-1fee-49ee-8cbc-09b14b196ab7_16`) confirms that NULL ciphering is non-compliant when confidentiality is required.
+   - **V-002 (DRB Integrity Protection Disabled)**: The original configuration explicitly set `drb_integrity = "no"`, which violates the SMF Integrity Policy requirement. The KB evidence (e.g., `198e8eee-d10a-4705-9680-ada8d22aeef9_17`) confirms that integrity protection must be enabled when required by the SMF.
+   - **V-003 (Weak Integrity Algorithm as Fallback)**: The original configuration included `nia0` as a fallback in `integrity_algorithms`, which violates the requirement to prioritize non-NULL integrity algorithms. The KB evidence (e.g., `a6006b4d-0b74-42b5-805a-69c3fc62e6af_83`) supports this requirement.
+
+   All violations are valid as they are explicitly present in the original configuration and supported by the provided KB evidence.
+
+3. **Fix Correctness**: 
+   - **V-001**: The corrected configuration replaces `nea0` with `nea2` and `nea1`, which are non-NULL ciphering algorithms.
+   - **V-002**: The corrected configuration sets `drb_integrity = "yes"` to enable integrity protection.
+   - **V-003**: The corrected configuration removes `nia0` and replaces it with `nia1` as a fallback integrity algorithm.
+
+   The fixes are minimal, targeted, and do not introduce unrelated changes or new sections.
+
+4. **Missed Issues**: A scan of the original and corrected configurations confirms no additional explicit insecure settings are present.
+
+5. **Parameter Context**: The audit respects the provided parameters (SMF Integrity Policy = Required, SMF Confidentiality Policy = Required). The Compliance Agent correctly treated these requirements as mandatory and addressed all violations accordingly.</p>
+  </div>
+
+  <span class="section-label">Configuration Review</span>
+  <div class="grid">
+    <div>
+      <p style="font-size: 11px; font-weight: bold; color: var(--muted); margin-bottom: 8px; text-transform: uppercase;">Original Configuration</p>
+      <pre>Active_gNBs = ( "gNB-Eurecom-CU");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-Eurecom-CU";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 222; mnc = 01; mnc_length = 2; snssaiList = ({ sst = 1, sd = 0xffffff }) });
+
+
+    nr_cellid = 12345678L;
+
+    tr_s_preference = "f1";
+
+    local_s_address = "127.0.0.4";
+    remote_s_address = "127.0.0.5";
+    local_s_portc   = 501;
+    local_s_portd   = 2153;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2153;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+
+    ////////// AMF parameters:
+    amf_ip_address = ({ ipv4 = "172.21.16.137"; });
+
+    NETWORK_INTERFACES :
+    {
+
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "172.21.16.109";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "172.21.16.109";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+  }
+);
+
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea0" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2", "nia0" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "no";
+};
+     log_config :
+     {
+       global_log_level                      ="info";
+       pdcp_log_level                        ="info";
+       rrc_log_level                         ="info";
+       f1ap_log_level                         ="info";
+       ngap_log_level                         ="info";
+    };
+</pre>
+    </div>
+    <div>
+      <p style="font-size: 11px; font-weight: bold; color: var(--muted); margin-bottom: 8px; text-transform: uppercase;">Corrected Configuration</p>
+      <pre>&lt;&lt;&lt;WORKING&gt;&gt;&gt;
+Active_gNBs = ( "gNB-Eurecom-CU");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-Eurecom-CU";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 222; mnc = 01; mnc_length = 2; snssaiList = ({ sst = 1, sd = 0xffffff }) });
+
+    nr_cellid = 12345678L;
+
+    tr_s_preference = "f1";
+
+    local_s_address = "127.0.0.4";
+    remote_s_address = "127.0.0.5";
+    local_s_portc   = 501;
+    local_s_portd   = 2153;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2153;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+    ////////// AMF parameters:
+    amf_ip_address = ({ ipv4 = "172.21.16.137"; });
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "172.21.16.109";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "172.21.16.109";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+ };
+);
+
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea2", "nea1" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2", "nia1" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "yes";
+};
+     log_config :
+     {
+       global_log_level                      ="info";
+       pdcp_log_level                        ="info";
+       rrc_log_level                         ="info";
+       f1ap_log_level                         ="info";
+       ngap_log_level                         ="info";
+    };
+&lt;&lt;&lt;END&gt;&gt;&gt;</pre>
+    </div>
+  </div>
+</body>
+</html>

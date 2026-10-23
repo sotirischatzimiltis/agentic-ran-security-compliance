@@ -1,0 +1,11 @@
+.DS_Store
+~$*
+.ipynb_checkpoints/
+__pycache__/
+.env
+*.zip
+*.mp4
+
+# Copyrighted specifications must not be committed (see knowledge_base/SOURCES.md)
+knowledge_base/**/*.pdf
+knowledge_base/**/*.docx

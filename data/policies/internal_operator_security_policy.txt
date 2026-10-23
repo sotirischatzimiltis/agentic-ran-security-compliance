@@ -1,0 +1,80 @@
+INTERNAL OPERATOR SECURITY POLICY
+RAN SECURITY COMPLIANCE BASELINE
+Version: 1.0
+Date: 2026-01-19
+Scope: UE ↔ gNB (Access Stratum / PDCP / DRBs)
+Applies to: Production deployments only
+
+================================================================
+POLICY OP-SEC-001
+Title: Non-NULL Ciphering for User-Plane Traffic
+----------------------------------------------------------------
+Rule:
+User-plane traffic between the CU and the UE SHALL use a non-NULL
+ciphering algorithm.
+
+Details:
+The ciphering algorithm NEA0 (NULL ciphering) SHALL NOT be used
+for production deployments. At least one of the following
+algorithms MUST be configured:
+- 128-NEA1
+- 128-NEA2
+- 128-NEA3
+
+Rationale:
+Prevent transmission of user data in clear text.
+
+Derived from (informative):
+3GPP TS 33.501 §5.3.2
+("Confidentiality protection should be used whenever regulations permit")
+
+Severity: Critical
+
+================================================================
+POLICY OP-SEC-002
+Title: Disable NULL Integrity Algorithms
+----------------------------------------------------------------
+Rule:
+NULL integrity algorithms SHALL NOT be enabled in production
+deployments.
+
+Details:
+The integrity algorithm NIA0 (NULL integrity) SHALL be removed
+from the allowed integrity algorithm list.
+
+This policy assumes that unauthenticated emergency sessions
+are not required in the deployment.
+
+Rationale:
+Prevent integrity downgrade attacks and ensure message integrity.
+
+Derived from (informative):
+3GPP TS 33.501 §5.3.3
+("NIA0 shall be disabled in gNB deployments where unauthenticated
+emergency sessions are not required")
+
+Severity: Critical
+
+================================================================
+POLICY OP-SEC-003
+Title: Enable User-Plane Integrity for DRBs
+----------------------------------------------------------------
+Rule:
+Integrity protection for user-plane traffic SHALL be enabled.
+
+Details:
+Integrity protection MUST be enabled for all Data Radio Bearers
+(DRBs) in production deployments.
+
+Rationale:
+Prevent tampering and replay attacks on user-plane traffic.
+
+Derived from (informative):
+3GPP TS 33.501 §5.3.3 (integrity protection support)
+Operator security best practices
+
+Severity: High
+
+================================================================
+END OF INTERNAL SECURITY POLICY
+================================================================

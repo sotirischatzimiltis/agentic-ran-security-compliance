@@ -1,0 +1,275 @@
+Filename: cu_gnb.conf
+Revision iteration: 1
+
+=== REFLECTION OUTPUT (JSON) ===
+{
+  "OverallAssessment": "The assessment correctly identified all violations present in the original configuration and proposed minimal and precise fixes strictly limited to security-related fields without unnecessary changes.",
+  "Issues": [],
+  "MustFixSummary": [
+    "Change security.ciphering_algorithms to remove \"nea0\" and use a secure algorithm such as \"nea2\"",
+    "Remove \"nia0\" from security.integrity_algorithms list, leaving only valid integrity algorithms",
+    "Set security.drb_integrity parameter to \"yes\" to enable DRB integrity protection"
+  ]
+}
+
+=== ORIGINAL CONFIGURATION ===
+Active_gNBs = ( "gNB-Eurecom-CU");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-Eurecom-CU";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1 }) });
+
+    nr_cellid = 12345678L;
+
+    tr_s_preference = "f1";
+
+    local_s_address = "127.0.0.4";
+    remote_s_address = "127.0.0.3";
+    local_s_portc   = 501;
+    local_s_portd   = 2152;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2152;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+
+    ////////// AMF parameters:
+    amf_ip_address = ({ ipv4 = "192.168.69.131"; });
+
+    NETWORK_INTERFACES :
+    {
+
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.18.207";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.18.207";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+  }
+);
+
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea0" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2", "nia0" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "no";
+};
+     log_config :
+     {
+       global_log_level                      ="info";
+       hw_log_level                          ="info";
+       phy_log_level                         ="info";
+       mac_log_level                         ="info";
+       rlc_log_level                         ="debug";
+       pdcp_log_level                        ="info";
+       rrc_log_level                         ="info";
+       f1ap_log_level                         ="debug";
+       ngap_log_level                         ="debug";
+    };
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection phase - Security-relevant fields:
+
+- security.ciphering_algorithms = ("nea0")
+- security.integrity_algorithms = ("nia2", "nia0")
+- security.drb_ciphering = "yes"
+- security.drb_integrity = "no"
+
+Analysis of these fields for compliance:
+
+1) ciphering_algorithms = ("nea0")
+  - NEA0 means no encryption (no ciphering). According to 3GPP TS 33.401 and O-RAN security requirements, ciphering must not be disabled.
+  - Usage of "nea0" ciphering algorithm, i.e. no encryption, is a security violation.
+
+2) integrity_algorithms = ("nia2", "nia0")
+  - "nia0" means no integrity protection.
+  - Having "nia0" in the list could cause selection of no integrity protection if UE supports it.
+  - 3GPP mandates integrity protection must be applied.
+  - The presence of "nia0" is a violation; should only contain integrity algorithms with integrity protection (e.g., nia1, nia2, nia3).
+
+3) drb_ciphering = "yes"
+  - Ciphering is enabled for DRBs, which is compliant.
+
+4) drb_integrity = "no"
+  - Integrity protection disabled for DRBs is a violation.
+  - 3GPP and O-RAN security require integrity protection for DRBs.
+  - drb_integrity must be "yes".
+
+Summary of violations:
+
+- ciphering_algorithms includes "nea0", which disables ciphering → violation.
+- integrity_algorithms includes "nia0", which disables integrity → violation.
+- drb_integrity = "no" disables integrity protection on DRB → violation.
+
+Fixing phase:
+
+- ciphering_algorithms: remove "nea0" and replace with secure ciphering algorithm. According to valid values: nea1, nea2, nea3.
+  - Choose "nea2" (AES based) as a secure choice.
+- integrity_algorithms: remove "nia0", leaving only "nia2".
+- drb_integrity: change to "yes".
+
+Specifications referenced:
+
+- 3GPP TS 33.401 (Security architecture and procedures for 3GPP access networks)
+- O-RAN Security WG documents stating ciphering and integrity MUST be enabled on all user-plane radio bearers.
+
+Security impact:
+
+- Using NEA0 or NIA0 disables ciphering/integrity leading to serious security risks such as data interception, spoofing, session hijacking.
+- Disabling DRB integrity exposes data integrity manipulation attacks.
+- Fixing these restores confidentiality and integrity protections as mandated.
+
+Verification phase:
+
+After fixing, no zero-ciphering or zero-integrity algorithms remain, and DRB integrity is enabled.
+
+Compliance Status: Non-Compliant (due to initial violations, now fixed)
+
+Recommended code modifications:
+
+- ciphering_algorithms = ("nea2");
+- integrity_algorithms = ("nia2");
+- drb_integrity = "yes";
+
+No other changes are needed.
+
+Out-of-Scope Recommendations:
+
+- Recommend enabling TLS/IPsec for transport interfaces.
+- Consider stronger algorithms based on latest 3GPP recommendations.
+- Implement certificate-based authentication.
+- Harden logging configurations as per policy.
+
+Compliance Status: Non-Compliant  
+Violations Found:  
+- Use of ciphering_algorithms "nea0" (no encryption)  
+- Inclusion of integrity_algorithms "nia0" (no integrity)  
+- drb_integrity disabled ("no")  
+
+Specification References:  
+- 3GPP TS 33.401 Security Architecture  
+- O-RAN WG4 Security Requirements  
+
+Recommended Code Modifications:  
+- Change ciphering_algorithms to remove "nea0" and use secure algorithm (e.g., "nea2")  
+- Remove "nia0" from integrity_algorithms list  
+- Set drb_integrity to "yes"  
+
+Security Impact Analysis:  
+- Enabling ciphering and integrity ensures confidentiality and integrity of user data, preventing eavesdropping, tampering, and replay attacks on user plane traffic.  
+- Disabling these leaves the radio interface vulnerable to multiple security threats.  
+
+Out-of-Scope Recommendations:  
+- Use secured transport layers (TLS/IPsec) for NG/API interfaces.  
+- Introduce certificate-based mutual authentication.  
+- Regularly update cipher and integrity algorithm preferences according to latest standard recommendations.
+
+
+=== CORRECTED CONFIGURATION ===
+Active_gNBs = ( "gNB-Eurecom-CU");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-Eurecom-CU";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1 }) });
+
+    nr_cellid = 12345678L;
+
+    tr_s_preference = "f1";
+
+    local_s_address = "127.0.0.4";
+    remote_s_address = "127.0.0.3";
+    local_s_portc   = 501;
+    local_s_portd   = 2152;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2152;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+
+    ////////// AMF parameters:
+    amf_ip_address = ({ ipv4 = "192.168.69.131"; });
+
+    NETWORK_INTERFACES :
+    {
+
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.18.207";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.18.207";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+  }
+);
+
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea2" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "yes";
+};
+     log_config :
+     {
+       global_log_level                      ="info";
+       hw_log_level                          ="info";
+       phy_log_level                         ="info";
+       mac_log_level                         ="info";
+       rlc_log_level                         ="debug";
+       pdcp_log_level                        ="info";
+       rrc_log_level                         ="info";
+       f1ap_log_level                         ="debug";
+       ngap_log_level                         ="debug";
+    };

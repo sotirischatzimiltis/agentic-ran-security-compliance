@@ -1,0 +1,182 @@
+=== COMPLIANCE ASSESSMENT ===
+Detection phase - Security relevant fields and values found:
+- security.ciphering_algorithms = ("nea0")
+- security.integrity_algorithms = ("nia2", "nia0")
+- security.drb_ciphering = "yes"
+- security.drb_integrity = "no"
+- SCTP configuration with SCTP_INSTREAMS=2, SCTP_OUTSTREAMS=2
+
+Standards Lookup
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection of security-relevant fields:
+
+- security:
+  - ciphering_algorithms = ("nea0")
+  - integrity_algorithms = ("nia2", "nia0")
+  - drb_ciphering = "yes"
+  - drb_integrity = "no"
+
+- SCTP settings (SCTP_INSTREAMS = 2, SCTP_OUTSTREAMS = 2)
+
+- transport addresses and ports (local_s_address, remote_s_address, local_s_portc, local_s_portd, remote_s_portc, remote_s_portd)
+
+- amf_ip_address and other IP addresses
+
+- logging levels
+
+Compliance Assessment and Violations:
+
+1. DRB Integrity Protection:
+   - Violation: drb_integrity = "no"
+   - Standards (3GPP TS 23.502 in ts_138300v170000p.pdf) require that user plane data belonging to a PDU session where UP integrity is required must be protected with integrity.
+   - Risk: Without DRB integrity protection, user plane data can be modified or tampered with leading to data corruption or spoofing.
+   - Fix: Change drb_integrity to "yes".
+
+2. Use of Null Ciphering Algorithm:
+   - ciphering_algorithms = ("nea0")
+   - "nea0" is a null ciphering algorithm (no encryption).
+   - Per 3GPP TS 33.501 clause 5.11.2 and 6.7.3.0 (ts_133511v170100p.pdf), null algorithms SHOULD NOT be prioritized or used unless operator explicitly requires it (rare and insecure).
+   - Risk: No confidentiality protection.
+   - Fix: Since the existing config only includes "nea0", a null algorithm, this is non-compliant. However, minimal change means we cannot add other algorithms but we can reorder/remove null algorithm if other non-null algorithms exist. Since none exist, remove "nea0" to enforce ciphering with a valid algorithm if present or leave list empty (may be out-of-scope).
+   - Minimal fix: Remove "nea0" from ciphering_algorithms list.
+
+3. Integrity Algorithms including Null ("nia0"):
+   - integrity_algorithms = ("nia2", "nia0")
+   - "nia0" is a null integrity algorithm.
+   - As above, should not be included or prioritized.
+   - Remove "nia0" leaving "nia2" only per standards.
+
+4. SCTP Security:
+   - SCTP is configured but no indication of SCTP-level security such as SCTP cookie handling, or IPsec.
+   - Minimal changes only per instructions; lack of IPsec/TLS is out-of-scope.
+   - No explicit parameters for SCTP security in config; no violation detected on present fields.
+
+5. Logging Levels:
+   - Logging is set to "info" which is acceptable; no security violation noted.
+
+Fixes:
+
+- Change:
+  drb_integrity = "yes";
+- Change:
+  ciphering_algorithms = ();
+  (remove "nea0" which is null ciphering algorithm)
+- Change:
+  integrity_algorithms = ("nia2"); 
+  (remove "nia0" which is null integrity algorithm)
+
+These are the minimal changes needed addressing only parameters explicitly present.
+
+Verification:
+
+- After fixes, drb_integrity is enabled, ciphering algorithms list excludes null algorithm, integrity algorithms exclude null.
+- Other parameters remain unchanged.
+- Compliant with standards per referenced documents.
+
+Compliance Status: Non-Compliant
+
+Violations Found:
+- DRB integrity protection disabled.
+- Presence of null ciphering algorithm "nea0".
+- Presence of null integrity algorithm "nia0".
+
+Specification References:
+- 3GPP TS 23.502 (ts_138300v170000p.pdf)
+- 3GPP TS 33.501 (ts_133511v170100p.pdf)
+- 3GPP TS 33.523 and TS 33.401 for interfaces and transport (mentioned for knowledge but no violations)
+- O-RAN WG11 security and logging (for context)
+
+Recommended Code Modifications:
+- Set drb_integrity = "yes";
+- Remove "nea0" from ciphering_algorithms list.
+- Remove "nia0" from integrity_algorithms list.
+
+Security Impact Analysis:
+Enabling DRB integrity protects user plane data from tampering and forgery. Removing null algorithms prevents the use of insecure ciphering and integrity modes that provide no real protection, significantly improving confidentiality and integrity of communications.
+
+Out-of-Scope Recommendations:
+- Consider configuring IPsec or TLS for SCTP transport protection.
+- Implement certificate-based authentication for F1 and N2 interfaces.
+- Enable enhanced logging and audit per O-RAN recommendations.
+- Regular key rotation and secure key management as per the standards.
+
+=== COMPLIANCE ASSESSMENT ===
+Detection phase – Security-relevant fields and values:
+
+1. ciphering_algorithms = ( "nea0" );
+2. integrity_algorithms = ( "nia2", "nia0" );
+3. drb_ciphering = "yes";
+4. drb_integrity = "no";
+5. SCTP configuration: SCTP_INSTREAMS = 2; SCTP_OUTSTREAMS = 2;
+
+Standards lookup summary relevant to these fields:
+
+- F1-C interface requires confidentiality, integrity, replay protection for control and user planes (TS 33.501 clauses 5.3.9, 9.2, 9.3, 9.4; TS 33.523; ts_138401v160300p.pdf; TS 33.523).
+- SCTP must be secured on F1-C interface (TS 33.117, TS 33.523).
+- Ciphering algorithms allowed: nea0, nea1, nea2, nea3. nea0 (NULL ciphering) is allowed but confidentiality protection should be used when permitted (TS 33.501).
+- Integrity protection algorithms allowed: nia0, nia1, nia2, nia3. However, integrity protection shall not use nia0 for user data (TS 33.501).
+- Data Radio Bearer (DRB) integrity protection must be enabled if required by the session (TS 23.502, ts_138300v170000p.pdf).
+- Integrity protection of user plane adds overhead, but using nia0 for integrity provides no security benefit and is discouraged.
+- Logging for security events is required (O-RAN WG11).
+
+Violations found:
+
+1. drb_integrity = "no"; violates requirement for integrity protection on DRBs if the policy requires it.
+2. ciphering_algorithms = ("nea0"); only uses nea0 (NULL ciphering). Although allowed, confidentiality protection should be used if regulations permit.
+3. integrity_algorithms includes nia0. Integrity protection shall not use nia0 on user data as it adds overhead without security benefits.
+4. SCTP configuration does not show any explicit security enabling (e.g., no mention of SCTP authentication, IPsec, or TLS). However, lack of these is Out-of-Scope because missing features are not violations if not explicitly configured.
+
+Fixes that can be done based strictly on the config to fix violations found:
+
+- Change drb_integrity from "no" to "yes" to enable integrity protection on DRBs.
+- Remove nia0 from integrity_algorithms because it should not be used for integrity protection.
+- Change ciphering_algorithms from ("nea0") to at least one algorithm with real protection like "nea2" which is supported per the list. Since "nea0" is allowed but confidentiality should be used if the policy permits, changing to "nea2" is more secure.
+- Keep other parameters unchanged.
+
+Applying minimal changes only.
+
+Specification References:
+
+- CU F1 interface security, confidentiality, integrity, replay protection: TS 33.501 clauses 5.3.9, 9.2, 9.3, 9.4; TS 33.523 (TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf)
+- Ciphering and integrity algorithms: TS 33.501 (ts_133501v180900p.pdf)
+- DRB integrity protection: TS 23.502 and ts_138300v170000p.pdf
+- Logging security events: O-RAN WG11.TS.STS-R004-v11.00.pdf
+
+Recommended Code Modifications:
+
+```diff
+security = {
+  # preferred ciphering algorithms
+-  ciphering_algorithms = ( "nea0" );
++  ciphering_algorithms = ( "nea2" );
+
+  # preferred integrity algorithms
+-  integrity_algorithms = ( "nia2", "nia0" );
++  integrity_algorithms = ( "nia2" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+-  drb_integrity = "no";
++  drb_integrity = "yes";
+};
+```
+
+Security Impact Analysis:
+
+- Enabling DRB integrity protection ("drb_integrity = yes") ensures the integrity and protection against tampering of user plane data on data radio bearers, preventing attacks that could manipulate user data.
+- Removing "nia0" from integrity_algorithms prevents use of an insecure or non-beneficial integrity algorithm on user data, improving integrity security.
+- Changing ciphering_algorithms from "nea0" (no cipher) to "nea2" strengthens confidentiality protection of user data and signaling, reducing risk of eavesdropping.
+- Overall these changes bring the configuration into compliance with 3GPP and O-RAN security requirements for CU.
+
+Out-of-Scope Recommendations:
+
+- Consider configuring secure SCTP (SCTP-AUTH) or securing transport with IPsec for protecting SCTP links.
+- Activation and management of keys based on security policy and certificate management.
+- More fine-grained logging and audit event configuration as per O-RAN security operational requirements.
+
+Compliance Status: Non-Compliant
+
+

@@ -1,0 +1,86 @@
+=== COMPLIANCE ASSESSMENT ===
+Compliance Status: Non-Compliant
+
+Violations Found
+1.  **Violation**: `ciphering_algorithms = ( "nea0" );`
+    *   **Specification References**: `ts_133501v180900p.pdf` ("The UE shall implement the following ciphering algorithms: NEA0, 128-NEA1, 128-NEA2... Confidentiality protection of the user data between the UE and the gNB is optional to use. Confidentiality protection of the RRC-signalling, and NAS-signalling is optional to use. Confidentiality protection should be used whenever regulations permit.")
+    *   **Security Impact Analysis**: The configuration explicitly lists only "nea0" (null ciphering) as the preferred ciphering algorithm. While NEA0 is a mandatory UE capability, it provides no confidentiality protection for user data. Configuring the CU to exclusively or primarily prefer null ciphering directly contradicts the recommendation that confidentiality protection "should be used whenever regulations permit," leaving user plane data vulnerable to eavesdropping and interception by unauthorized parties.
+    *   **Recommended Code Modifications**: Prioritize stronger ciphering algorithms.
+
+2.  **Violation**: `drb_integrity = "no";`
+    *   **Specification References**:
+        *   `ts_138300v170000p.pdf` ("Ciphering and integrity protection can be configured per DRB but all DRBs belonging to a PDU session for which the User Plane Security Enforcement information indicates that UP integrity protection is required (see TS 23.502 [22]), are configured with integrity protection.")
+        *   `ts_133501v180900p.pdf` ("The UE shall support integrity protection and replay protection of user data between the UE and the gNB.")
+        *   `TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf` ("Requirement Name: User plane data integrity protection over N3/Xn/F1 interface." and "Requirement Description: The gNB supports confidentiality, integrity and replay protection on the gNB DU-CU F1-U interface for user plane, the transport of user data over N3 is integrity, confidentiality and replay-protected...")
+    *   **Security Impact Analysis**: Disabling DRB integrity protection means that user plane data is not protected against unauthorized modification, insertion, deletion, or replay attacks. This compromises the integrity and authenticity of user communications, allowing an attacker to tamper with or inject false data into user traffic without detection. This is a direct violation of 3GPP standards requiring user plane integrity protection.
+    *   **Recommended Code Modifications**: Enable DRB integrity protection.
+
+Out-of-Scope Recommendations
+*   **Logging Levels**: Consider setting `global_log_level` and other specific log levels (e.g., `f1ap_log_level`, `ngap_log_level`) to a more verbose setting (e.g., "warning" or "error" for critical security events, or "debug" for more detailed security tracing) to ensure effective logging of security-related events, as per O-RAN.WG11.TS.STS-R004-v11.00.pdf (7.8.1 O-CU logging and monitoring). The current "info" level might not capture all necessary security events for auditing and incident response.
+
+
+=== COMPLIANCE ASSESSMENT ===
+Compliance Status: Non-Compliant
+
+Violations Found:
+1.  **Ciphering Algorithm Insecurity**: The `ciphering_algorithms` parameter is configured with "nea0", which provides no confidentiality protection.
+2.  **Integrity Algorithm Insecurity**: The `integrity_algorithms` parameter includes "nia0", which offers no integrity protection.
+3.  **DRB Integrity Disabled**: The `drb_integrity` parameter is set to "no", explicitly disabling integrity protection for Data Radio Bearers (DRBs).
+
+Specification References:
+1.  **Ciphering Algorithm Insecurity**: TS 33.511 [2], clause 6.7.3.0 ("Each gNB shall be configured via network management with lists of algorithms which are allowed for usage. There shall be one list for integrity algorithms, and one for ciphering algorithms. These lists shall be ordered according to a priority decided by the operator.") - `ts_133511v170100p.pdf`
+2.  **Integrity Algorithm Insecurity**: TS 33.511 [2], clause 6.7.3.0 ("Each gNB shall be configured via network management with lists of algorithms which are allowed for usage. There shall be one list for integrity algorithms, and one for ciphering algorithms. These lists shall be ordered according to a priority decided by the operator.") - `ts_133511v170100p.pdf`
+    *   TS 33.501 [3], clauses 5.3.9, 9.3 and 9.4 ("The gNB supports confidentiality, integrity and replay protection on the gNB DU-CU F1-U interface for user plane...") - `ts_138401v160300p.pdf`
+3.  **DRB Integrity Disabled**:
+    *   TS 33.501 [3], clauses 5.3.9, 9.3 and 9.4 ("The gNB supports confidentiality, integrity and replay protection on the gNB DU-CU F1-U interface for user plane...") - `ts_138401v160300p.pdf`
+    *   TS 33.501 [3], sub-clause 9.1.2 ("In order to protect the traffic on the F1-U interface, IPsec ESP and IKEv2 certificates-based authentication shall be supported as specified in sub-clause 9.1.2 of the present document with confidentiality, integrity and replay protection.") - `ts_133501v180900p.pdf`
+
+Recommended Code Modifications:
+1.  **Ciphering Algorithm Insecurity**: Changed `ciphering_algorithms = ( "nea0" )` to `ciphering_algorithms = ( "nea2" )` to ensure a strong ciphering algorithm is preferred.
+2.  **Integrity Algorithm Insecurity**: Removed "nia0" from `integrity_algorithms = ( "nia2", "nia0" )` to prevent the use of a null integrity algorithm, resulting in `integrity_algorithms = ( "nia2" )`.
+3.  **DRB Integrity Disabled**: Changed `drb_integrity = "no"` to `drb_integrity = "yes"` to enable user plane data integrity protection as required.
+
+Security Impact Analysis:
+1.  **Ciphering Algorithm Insecurity**: Using "nea0" for ciphering means that user data on the radio interface is transmitted in clear text. This makes the data vulnerable to eavesdropping and disclosure by unauthorized entities, compromising the confidentiality of user communications. The fix ensures that a robust ciphering algorithm ("nea2") is used, protecting data confidentiality.
+2.  **Integrity Algorithm Insecurity**: The inclusion of "nia0" as an option for integrity algorithms could lead to scenarios where user plane data is not integrity protected. This exposes the data to undetectable modification, insertion, or deletion attacks, which could result in data corruption, service disruption, or injection of malicious content. Removing "nia0" guarantees that integrity protection is always applied with a strong algorithm like "nia2", safeguarding data integrity.
+3.  **DRB Integrity Disabled**: Disabling integrity protection for DRBs directly violates 3GPP standards that mandate integrity protection for user plane data over interfaces like F1-U. This leaves user traffic susceptible to tampering, where an attacker could alter user data without detection. Enabling `drb_integrity` ensures that user plane data is protected against such integrity attacks, maintaining the authenticity and trustworthiness of communications.
+
+Out-of-Scope Recommendations:
+*   The configuration does not explicitly define secure transport protocols like IPsec or DTLS for F1-C, F1-U, N2, or Xn interfaces, which are mandated by standards for confidentiality, integrity, and replay protection (e.g., TS 33.501 [3] and O-RAN.WG11.TR.Open-FH-Security.0-R004-v05.00.pdf). While the current evaluation mode focuses on existing parameters, implementation of these protocols is critical for comprehensive security.
+*   Consider enhancing logging levels from "info" to a more detailed level (e.g., "debug" or "warning" for specific modules) in a production environment to facilitate better security monitoring, incident detection, and forensic analysis, as per O-RAN.WG11.TS.STS-R004-v11.00.pdf.
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Compliance Status: Non-Compliant
+
+Violations Found:
+1.  **Ciphering Algorithm Selection**: The `ciphering_algorithms` parameter includes "nea0", which is a null ciphering algorithm.
+2.  **Integrity Algorithm Selection**: The `integrity_algorithms` parameter includes "nia0", which is a null integrity algorithm.
+3.  **DRB Integrity Protection**: The `drb_integrity` parameter is set to "no", disabling user plane integrity protection for Data Radio Bearers.
+
+Specification References:
+1.  **Ciphering Algorithm Selection**:
+    *   TS 33.501 [3], clause 5.3.2 (Filename: ts_138401v160300p.pdf): "The gNB activates ciphering of user data based on the security policy sent by the SMF as specified in TS 33.501 [3], clause 5.3.2."
+    *   TS 33.501 [3], clause 6.6.3 (Filename: ts_133501v180900p.pdf): "The PDCP protocol... shall be responsible for user plane data confidentiality protection."
+    *   O-RAN.WG11.TR.Threat-Modeling.0-R004-v07.00.pdf: "Each O-RU SHOULD be configured with lists of algorithms which are allowed for usage. There SHOULD be none list for integrity algorithms, and one for ciphering algorithms."
+2.  **Integrity Algorithm Selection**:
+    *   TS 33.501 [3], clause 5.3.3 (Filename: TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf): "The gNB supports integrity protection and replay protection of user data between the UE and the gNB as specified in TS 33.501 [3], clause 5.3.3."
+    *   O-RAN.WG11.TR.Threat-Modeling.0-R004-v07.00.pdf: "Each O-RU SHOULD be configured with lists of algorithms which are allowed for usage. There SHOULD be none list for integrity algorithms, and one for ciphering algorithms."
+3.  **DRB Integrity Protection**:
+    *   TS 33.501 [3], clause 5.3.3 (Filename: TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf): "The gNB supports integrity protection and replay protection of user data between the UE and the gNB as specified in TS 33.501 [3], clause 5.3.3."
+    *   TS 38.300 [22], clause 9.2.1.2 (Filename: ts_138300v170000p.pdf): "Ciphering and integrity protection can be configured per DRB but all DRBs belonging to a PDU session for which the User Plane Security Enforcement information indicates that UP integrity protection is required (see TS 23.502 [22]), are configured with integrity protection."
+
+Recommended Code Modifications:
+1.  Change `ciphering_algorithms = ( "nea0" );` to `ciphering_algorithms = ( "nea2" );`
+2.  Change `integrity_algorithms = ( "nia2", "nia0" );` to `integrity_algorithms = ( "nia2" );`
+3.  Change `drb_integrity = "no";` to `drb_integrity = "yes";`
+
+Security Impact Analysis:
+1.  **Ciphering Algorithm Selection**: Using "nea0" (null ciphering) for user data leaves communications vulnerable to eavesdropping. An attacker could intercept and read sensitive user information transmitted over the air interface. By changing to a strong ciphering algorithm like "nea2", user data confidentiality is ensured, protecting against unauthorized disclosure.
+2.  **Integrity Algorithm Selection**: Including "nia0" (null integrity) in the preferred algorithms means that if a UE supports only "nia0", user plane data will lack integrity protection. This allows an attacker to tamper with, modify, or inject malicious data into user traffic without detection, potentially leading to data corruption, service disruption, or exploitation of the network. Removing "nia0" ensures that only cryptographically strong integrity algorithms are used, safeguarding data authenticity and integrity.
+3.  **DRB Integrity Protection**: Disabling `drb_integrity` exposes user plane data to integrity attacks. This means that data transmitted over DRBs can be maliciously altered, corrupted, or replayed without the network or UE detecting the compromise. Enabling DRB integrity protection ensures that user data is authenticated and protected against tampering, maintaining the reliability and trustworthiness of communications.
+
+Out-of-Scope Recommendations:
+*   Consider setting log levels (e.g., `global_log_level`, `pdcp_log_level`, `rrc_log_level`, `f1ap_log_level`, `ngap_log_level`) to "debug" or a more verbose option for enhanced security monitoring, auditing, and forensic analysis. This would provide more detailed information in case of security incidents.
+*   Review the `Asn1_verbosity` setting. While "none" is not a direct security violation, a higher verbosity level could aid in debugging and security analysis in complex scenarios.

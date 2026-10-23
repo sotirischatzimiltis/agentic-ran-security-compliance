@@ -1,0 +1,248 @@
+Filename: gnb-cucp.sa.f1.conf
+Revision iteration: 1
+
+=== REFLECTION OUTPUT (JSON) ===
+{
+  "OverallAssessment": "The assessment correctly identified relevant security violations in the given configuration, and the corrected configuration minimally addresses these by updating ciphering and integrity algorithms and enabling DRB integrity. The scope was respected by not considering TLS/IPsec or certificate management as violations. The corrected configuration is fully present and the changes are minimal, preserving formatting and order.",
+  "Issues": [
+    {
+      "id": "ISSUE-1",
+      "type": "IncorrectCitation",
+      "description": "The assessment cites some 3GPP documents with inconsistent formatting and incomplete document names, e.g., using partial filenames or missing the full official document names, which may reduce clarity and traceability.",
+      "required_action": "Provide consistent, official, and complete references for all cited standards and documents for clarity."
+    },
+    {
+      "id": "ISSUE-2",
+      "type": "MissedViolation",
+      "description": "The assessment notes SCTP security features are out-of-scope but does not explicitly call out lack of SCTP authentication and integrity as a recommended area for improvement in the out-of-scope recommendations. While not violations, this could be highlighted better for completeness.",
+      "required_action": "Add explicit mention in out-of-scope recommendations to ensure SCTP authentication and integrity per 3GPP TS 33.117."
+    }
+  ],
+  "MustFixSummary": [
+    "Correct and standardize all cited specification references for clarity and completeness.",
+    "Add explicit mention about SCTP authentication and integrity in out-of-scope recommendations."
+  ]
+}
+
+=== ORIGINAL CONFIGURATION ===
+Active_gNBs = ( "gNB-OAI");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-OAI";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1 }, { sst = 2 }, { sst = 3 }) });
+
+
+    nr_cellid = 12345678L;
+
+    tr_s_preference = "f1";
+
+    local_s_address = "192.168.71.150";
+    remote_s_address = "0.0.0.0"; # multiple DUs
+    local_s_portc   = 501;
+    local_s_portd   = 2152;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2152;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+
+    ////////// AMF parameters:
+    amf_ip_address = ({ ipv4 = "oai-amf"; });
+
+    E1_INTERFACE =
+    (
+      {
+        type = "cp";
+        ipv4_cucp = "192.168.71.150";
+        port_cucp = 38462;
+        ipv4_cuup = "0.0.0.0"; # multiple CU-UPs
+        port_cuup = 38462;
+      }
+    )
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.150/24";
+    };
+  }
+);
+
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea0" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2", "nia0" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "no";
+};
+     log_config :
+     {
+       global_log_level                      ="info";
+       hw_log_level                          ="info";
+       phy_log_level                         ="info";
+       mac_log_level                         ="info";
+       rlc_log_level                         ="debug";
+       pdcp_log_level                        ="info";
+       rrc_log_level                         ="info";
+       f1ap_log_level                         ="info";
+       ngap_log_level                         ="debug";
+       sctp_log_level                         ="info";
+    };
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection Phase - Security Relevant Fields:
+- security.ciphering_algorithms = ("nea0")
+- security.integrity_algorithms = ("nia2", "nia0")
+- security.drb_ciphering = "yes"
+- security.drb_integrity = "no"
+- SCTP_INSTREAMS = 2
+- SCTP_OUTSTREAMS = 2
+- Addresses and ports used in interfaces (local_s_address, remote_s_address, local_s_portc, local_s_portd, remote_s_portc, remote_s_portd)
+- AMF IP address field: amf_ip_address = ({ ipv4 = "oai-amf"; })
+- E1 Interface IP and port settings
+- Network interfaces IP
+- Log levels configuration
+
+Assessment Summary from Knowledge Base and Standards:
+
+1) Ciphering Algorithms:
+- Algorithms must be selected from a configured allowed and prioritized list based on UE capabilities and operator configuration (3GPP TS 33.501 clause 5.11.2, clause 6.7.3.0, ts_133511v170100p.pdf).
+- "nea0" refers to NULL ciphering algorithm which disables ciphering, which is insecure.
+- Operators typically should choose secure algorithms like nea1, nea2, or nea3.
+
+2) Integrity Algorithms:
+- The integrity algorithms valid are nia0 (null), nia1, nia2, nia3 (3GPP TS33.501 Annex D, ts_133501v180900p.pdf).
+- "nia2" is AES-based strong integrity protection and "nia0" is null. Using null integrity may compromise data protection.
+- All DRBs for which user plane integrity is required must be configured with integrity protection.
+
+3) DRB Integrity:
+- Integrity protection for DRB is mandatory if user plane security enforcement requires it (3GPP TS 23.502, ts_138300v170000p.pdf).
+- Current config has drb_integrity = "no" which disables integrity protection for DRBs, a security risk.
+
+4) F1 Interface Security:
+- F1 control plane must support confidentiality, integrity, and replay protection (TS 33.501 clauses 5.3.9, 9.2, 9.4, TS 33.523, TS 33.117, TS 33.511).
+- Configuration must reflect that integrity protection is enabled.
+
+5) E1 Interface Security:
+- E1 interface between CU-CP and CU-UP must be confidentiality, integrity, and replay protected (TS 33.501 clauses 5.3.9, 5.3.10 and TS 33.523).
+- Integrity protection is expected; no explicit config disables it but review relevant flags.
+
+6) SCTP Security:
+- SCTP parameters: SCTP streams are configured, but SCTP should use security features for authentication and integrity (TS 33.117).
+- No explicit SCTP security config is visible, no violation detected here due to out-of-scope missing features.
+
+7) Logging:
+- Logging should include security-critical events and identity/account events (O-RAN Security Requirements [O-RAN.WG11.TS.STS-R004]).
+- Log levels are set. No direct violation seen but no mandatory minimal levels specified in config.
+
+Violations:
+1) Ciphering algorithm "nea0" use is insecure because it means no ciphering (null ciphering).
+2) Integrity algorithm list contains "nia0" (null integrity), which undermines integrity protection.
+3) drb_integrity is set to "no", disabling integrity protection on DRBs, which is mandatory for user-plane integrity protection scenarios.
+
+Risk:
+- Using null ciphering and null integrity algorithms exposes the control and user plane data to eavesdropping and tampering.
+- Disabling DRB integrity protection can allow undetected data modification or attacks on user plane data.
+
+Fixes:
+- Change ciphering_algorithms from ("nea0") to at least one secure algorithm, e.g., "nea2".
+- Remove "nia0" from integrity_algorithms or move it behind strong algorithms. Better: integrity_algorithms = ("nia2", "nia1")
+- Change drb_integrity to "yes" to enforce integrity protection on DRBs.
+
+Minimal changes only, preserving formatting and order.
+
+Specification References:
+- 3GPP TS 33.501 clauses 5.11.2, 6.7.3.0 (Ciphering algo selection) [ts_133511v170100p.pdf]
+- 3GPP TS 33.501 Annex D Integrity algos (nia0, nia1, nia2, nia3) [ts_133501v180900p.pdf]
+- 3GPP TS 23.502 (DRB integrity requirements) [ts_138300v170000p.pdf]
+- 3GPP TS 33.501 clauses 5.3.9, 9.2, 9.4 (F1/E1 interface security reqs) [TS 133 523 - V18.2.0.pdf]
+- O-RAN WG11 Security Requirements for Logging [O-RAN.WG11.TS.STS-R004-v11.00.pdf]
+
+Recommended Code Modifications:
+
+
+Security Impact Analysis:
+- Changing ciphering algorithm from "nea0" (null) to "nea2" (AES based) enables confidential transmission of control and user data, protecting against eavesdropping.
+- Removing null integrity and placing strong algorithms ensures message integrity and protection against tampering or replay attacks.
+- Enabling DRB integrity protection enforces integrity checks on data radio bearers, safeguarding user data CS/PS sessions.
+- These changes align the configuration with mandatory 3GPP security standards for CU-CP functions.
+
+Out-of-Scope Recommendations:
+- The configuration does not specify TLS/IPsec for interface security, certificate management, or key management protocols; these are out-of-scope here but recommended for production.
+- SCTP authentication and integrity protection parameters are not explicitly configured — recommended to ensure SCTP security as per 3GPP TS 33.117.
+
+Compliance Status: Non-Compliant
+
+Corrected config below.
+Compliance Status: Non-Compliant
+Violations Found:
+1) Use of null ciphering algorithm ("nea0") which disables ciphering.
+2) Inclusion of null integrity algorithm ("nia0") undermines integrity.
+3) Disabled integrity protection on DRBs (drb_integrity = "no") which is mandatory in applicable scenarios.
+
+Specification References:
+- 3GPP TS 33.501 clauses 5.11.2, 6.7.3.0 [ts_133511v170100p.pdf]
+- 3GPP TS 33.501 Annex D [ts_133501v180900p.pdf]
+- 3GPP TS 23.502 (User plane integrity) [ts_138300v170000p.pdf]
+- 3GPP TS 33.501 clauses 5.3.9, 9.2, 9.4 (F1/E1 interfaces) [TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf]
+- O-RAN Security Logging Requirements [O-RAN.WG11.TS.STS-R004-v11.00.pdf]
+
+Recommended Code Modifications:
+
+
+Security Impact Analysis:
+- Changing from null ciphering to AES-based ciphering ("nea2") activates confidentiality of communications, protecting against eavesdropping.
+- Removal of null integrity and use of strong integrity algorithms guarantees message integrity and data authenticity.
+- Enabling DRB integrity ensures protection of user plane data integrity as mandated, preventing undetected tampering.
+- These changes elevate the security posture of CU-CP functions to align with 3GPP and O-RAN standards for control and user plane data.
+
+Out-of-Scope Recommendations:
+- Transport layer security mechanisms (TLS, IPsec) and more advanced SCTP security controls are recommended but not present in this config.
+- Certificate management and key management protocols are also outside this evaluation.
+
+
+=== CORRECTED CONFIGURATION ===
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea2" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2", "nia1" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "yes";
+};

@@ -1,0 +1,259 @@
+Filename: cu_gnb.conf
+Revision iteration: 1
+
+=== REFLECTION OUTPUT (JSON) ===
+```json
+{
+  "OverallAssessment": "The assessment correctly identifies existing violations and provides justified fixes. However, there is one instance where the minimal-change policy was not strictly adhered to, by adding a comment to an unchanged and compliant line.",
+  "Issues": [
+    {
+      "id": "ISSUE-1",
+      "type": "OverChange",
+      "description": "A comment was added to the 'mac_log_level' line in the corrected configuration, but this line was already set to 'info' in the original configuration and was not identified as a violation. This constitutes a change that is not a direct fix for an identified violation and violates the minimal-change policy (no speculative additions).",
+      "required_action": "Remove the newly added comment from the 'mac_log_level' line in the corrected configuration as it did not constitute a violation fix."
+    }
+  ],
+  "MustFixSummary": [
+    "Ensure that only changes directly addressing identified violations are made to the configuration. Remove the comment added to the 'mac_log_level' line."
+  ]
+}
+```
+
+=== ORIGINAL CONFIGURATION ===
+Active_gNBs = ( "gNB-Eurecom-CU");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-Eurecom-CU";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1 }) });
+
+    nr_cellid = 12345678L;
+
+    tr_s_preference = "f1";
+
+    local_s_address = "127.0.0.4";
+    remote_s_address = "127.0.0.3";
+    local_s_portc   = 501;
+    local_s_portd   = 2152;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2152;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+
+    ////////// AMF parameters:
+    amf_ip_address = ({ ipv4 = "192.168.69.131"; });
+
+    NETWORK_INTERFACES :
+    {
+
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.18.207";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.18.207";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+  }
+);
+
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea0" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2", "nia0" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "no";
+};
+     log_config :
+     {
+       global_log_level                      ="info";
+       hw_log_level                          ="info";
+       phy_log_level                         ="info";
+       mac_log_level                         ="info";
+       rlc_log_level                         ="debug";
+       pdcp_log_level                        ="info";
+       rrc_log_level                         ="info";
+       f1ap_log_level                         ="debug";
+       ngap_log_level                         ="debug";
+    };
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Compliance Status: Non-Compliant
+
+Violations Found
+1.  **DRB Integrity Disabled**: User Plane integrity protection for Data Radio Bearers (DRBs) is explicitly disabled.
+2.  **NULL Ciphering Algorithm Only**: The `ciphering_algorithms` parameter only lists `nea0` (NULL ciphering), which provides no confidentiality.
+3.  **NULL Integrity Algorithm Included**: The `integrity_algorithms` parameter includes `nia0` (NULL integrity), which provides no integrity protection, making it vulnerable to downgrade attacks.
+4.  **Excessive Logging Levels**: `rlc_log_level`, `f1ap_log_level`, and `ngap_log_level` are set to `debug`, which can expose sensitive information in a production environment.
+
+Specification References
+1.  **DRB Integrity Disabled**: 3GPP TS 33.523 version 18.2.0 Release 18, Section 4.2.2.1.5, Requirement Description: "The gNB supports confidentiality, integrity and replay protection on the gNB DU-CU F1-U interface for user plane, the transport of user data over N3 is integrity, confidentiality and replay-protected..." (Filename: `TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf`). Also, 3GPP TS 38.300 v17.0.0, Section 18.3: "all DRBs belonging to a PDU session for which the User Plane Security Enforcement information indicates that UP integrity protection is required... are configured with integrity protection." (Filename: `ts_138300v170000p.pdf`).
+2.  **NULL Ciphering Algorithm Only**: 3GPP TS 33.501, Clause 5.3.2 (referenced in `ts_138401v160300p.pdf`, "Ciphering of user data based on the security policy sent by the SMF"). The general principle of confidentiality protection mandates the use of robust ciphering algorithms, and `nea0` provides no confidentiality.
+3.  **NULL Integrity Algorithm Included**: 3GPP TS 33.501, Clause 5.11.2 (referenced in `ts_133511v170100p.pdf`, "AS algorithms selection"). The general principle of integrity protection mandates the use of robust integrity algorithms, and `nia0` provides no integrity protection.
+4.  **Excessive Logging Levels**: O-RAN.WG11.Security-Log-Management-TR.O-R004-v05.00.pdf, Section 5.2.1.3: Recommends logging specific security events (e.g., network connections, changes to configurations, resource usage) rather than general `debug` level logging which can expose excessive information.
+
+Recommended Code Modifications
+
+```
+--- a/cu_gnb.conf
++++ b/cu_gnb.conf
+@@ -53,23 +53,23 @@
+ security = {
+   # preferred ciphering algorithms
+   # the first one of the list that an UE supports in chosen
+-  # valid values: nea0, nea1, nea2, nea3
+-  ciphering_algorithms = ( "nea0" );
++  # valid values: nea1, nea2, nea3
++  ciphering_algorithms = ( "nea2" );
+ 
+   # preferred integrity algorithms
+   # the first one of the list that an UE supports in chosen
+-  # valid values: nia0, nia1, nia2, nia3
+-  integrity_algorithms = ( "nia2", "nia0" );
++  # valid values: nia1, nia2, nia3
++  integrity_algorithms = ( "nia2" );
+ 
+   # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+   # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+   drb_ciphering = "yes";
+-  drb_integrity = "no";
++  drb_integrity = "yes";
+ };
+      log_config :
+      {
+        global_log_level                      ="info";
+        hw_log_level                          ="info";
+        phy_log_level                         ="info";
+-       mac_log_level                         ="info";
+-       rlc_log_level                         ="debug";
++       mac_log_level                         ="info"; # O-RAN.WG11.Security-Log-Management-TR.O-R004-v05.00.pdf Section 5.2.1.3 - Avoid debug in production
++       rlc_log_level                         ="info"; # O-RAN.WG11.Security-Log-Management-TR.O-R004-v05.00.pdf Section 5.2.1.3 - Avoid debug in production
+        pdcp_log_level                        ="info";
+        rrc_log_level                         ="info";
+-       f1ap_log_level                         ="debug";
+-       ngap_log_level                         ="debug";
++       f1ap_log_level                         ="info"; # O-RAN.WG11.Security-Log-Management-TR.O-R004-v05.00.pdf Section 5.2.1.3 - Avoid debug in production
++       ngap_log_level                         ="info"; # O-RAN.WG11.Security-Log-Management-TR.O-R004-v05.00.pdf Section 5.2.1.3 - Avoid debug in production
+     };
+```
+
+
+Security Impact Analysis
+1.  **DRB Integrity Disabled**: Disabling DRB integrity (`drb_integrity = "no"`) means that user plane data can be tampered with in transit without detection. An attacker could modify user data, leading to incorrect information, denial of service, or other malicious activities. Changing `drb_integrity = "yes"` enables cryptographic integrity protection, ensuring that any unauthorized modification of user plane data is detected, thus upholding data integrity.
+2.  **NULL Ciphering Algorithm Only**: Using only `nea0` for ciphering offers no confidentiality for user plane data. This means that an attacker can easily eavesdrop on communications and read sensitive user information. Changing to `ciphering_algorithms = ("nea2")` enables AES-128 ciphering, providing strong confidentiality protection for user plane data, preventing unauthorized disclosure.
+3.  **NULL Integrity Algorithm Included**: Including `nia0` in the list of preferred integrity algorithms creates a vulnerability to downgrade attacks. If an attacker can manipulate the negotiation process, the network could be tricked into using `nia0`, leaving user plane data vulnerable to undetected modification. Removing `nia0` (`integrity_algorithms = ("nia2")`) ensures that only robust integrity algorithms like NIA2 are considered, preventing downgrade attacks and maintaining data integrity.
+4.  **Excessive Logging Levels**: Setting `rlc_log_level`, `f1ap_log_level`, and `ngap_log_level` to `debug` in a production environment can lead to the logging of excessive and potentially sensitive information, including internal system states, protocol details, and even parts of user data. This information can be exploited by attackers for reconnaissance, to understand system vulnerabilities, or to aid in further attacks. Changing these log levels to `info` significantly reduces the amount of logged data, mitigating the risk of information leakage while still providing sufficient operational insights.
+
+Out-of-Scope Recommendations
+*   **Secure Transport Protocols for Interfaces**: The F1-C, N2 (NGAP), and N3 (NGU) interfaces are critical and require robust confidentiality, integrity, and replay protection (3GPP TS 33.523, 3GPP TS 38.401). While SCTP is used, the configuration does not explicitly show the use or configuration of IPsec or TLS for these interfaces, which are common and recommended mechanisms to provide the necessary transport layer security. It is highly recommended to implement and configure IPsec or TLS for these interfaces.
+*   **Stronger Ciphering and Integrity Algorithms**: While `nea2` and `nia2` provide adequate security, consider supporting and prioritizing `nea3` (AES-256) and `nia3` if higher security assurance is required and supported by the network.
+*   **Key Management and Rotation**: The provided configuration does not include parameters for key management and rotation. Proper key management, including secure generation, storage, distribution, and regular rotation of cryptographic keys, is essential for maintaining long-term security. Mechanisms compliant with 3GPP TS 33.501 should be implemented.
+*   **Granular Audit Logging**: Beyond general log levels, implement specific audit logging for security-relevant events as detailed in O-RAN.WG11.Security-Log-Management-TR.O-R004-v05.00.pdf, such as network connection changes, configuration modifications, resource usage anomalies, and security-related errors. This ensures comprehensive security monitoring and forensic capabilities.
+*   **Mitigation of Bidding Down Attacks**: Ensure that the CU is configured to actively prevent bidding down attacks for all supported security features as per 3GPP TS 33.501. This may involve specific configuration parameters or inherent software logic not directly visible in this configuration fragment.
+
+
+=== CORRECTED CONFIGURATION ===
+Active_gNBs = ( "gNB-Eurecom-CU");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-Eurecom-CU";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1 }) });
+
+    nr_cellid = 12345678L;
+
+    tr_s_preference = "f1";
+
+    local_s_address = "127.0.0.4";
+    remote_s_address = "127.0.0.3";
+    local_s_portc   = 501;
+    local_s_portd   = 2152;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2152;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+
+    ////////// AMF parameters:
+    amf_ip_address = ({ ipv4 = "192.168.69.131"; });
+
+    NETWORK_INTERFACES :
+    {
+
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.18.207";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.18.207";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+  }
+);
+
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea1, nea2, nea3
+  ciphering_algorithms = ( "nea2" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia1, nia2, nia3
+  integrity_algorithms = ( "nia2" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "yes";
+};
+     log_config :
+     {
+       global_log_level                      ="info";
+       hw_log_level                          ="info";
+       phy_log_level                         ="info";
+       mac_log_level                         ="info"; # O-RAN.WG11.Security-Log-Management-TR.O-R004-v05.00.pdf Section 5.2.1.3 - Avoid debug in production
+       rlc_log_level                         ="info"; # O-RAN.WG11.Security-Log-Management-TR.O-R004-v05.00.pdf Section 5.2.1.3 - Avoid debug in production
+       pdcp_log_level                        ="info";
+       rrc_log_level                         ="info";
+       f1ap_log_level                         ="info"; # O-RAN.WG11.Security-Log-Management-TR.O-R004-v05.00.pdf Section 5.2.1.3 - Avoid debug in production
+       ngap_log_level                         ="info"; # O-RAN.WG11.Security-Log-Management-TR.O-R004-v05.00.pdf Section 5.2.1.3 - Avoid debug in production
+    };

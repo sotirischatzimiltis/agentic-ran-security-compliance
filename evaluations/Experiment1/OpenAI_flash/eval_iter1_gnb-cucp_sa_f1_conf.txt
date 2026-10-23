@@ -1,0 +1,322 @@
+Filename: gnb-cucp.sa.f1.conf
+Revision iteration: 1
+
+=== REFLECTION OUTPUT (JSON) ===
+{
+  "OverallAssessment": "The compliance assessment correctly identified the existing security configuration violations and proposed minimal changes aligning with stated policies and 3GPP standards.",
+  "Issues": [
+    {
+      "id": "ISSUE-1",
+      "type": "MissedViolation",
+      "description": "The assessment missed that 'drb_integrity' was set to 'no' in the original configuration, which violates mandatory integrity protection requirements per TS 33.501. This was correctly flagged in violations but the assessment text does not explicitly highlight the presence of this incorrect value in the original config.",
+      "required_action": "Explicitly confirm the presence of 'drb_integrity = \"no\"' in the original config and ensure violation references it clearly."
+    },
+    {
+      "id": "ISSUE-2",
+      "type": "MissedViolation",
+      "description": "The presence of 'ciphering_algorithms = ( \"nea0\" )' in the original config constitutes null ciphering which is disallowed, but this was not clearly stated in the violation description as a direct reading from the original config.",
+      "required_action": "Ensure the violation clearly states that the original config contains only 'nea0' and why this is non-compliant."
+    },
+    {
+      "id": "ISSUE-3",
+      "type": "UnderChange",
+      "description": "The assessment states that it cannot fix 'remote_s_address' and 'ipv4_cuup' being '0.0.0.0' due to minimal change constraints but does not add any comment or advisory in the corrected configuration about this potential issue. This limits clarity for operators who may overlook this insecurity.",
+      "required_action": "Add a comment or advisory note in the corrected configuration near these addresses indicating that '0.0.0.0' is likely insecure and should be set properly when feasible."
+    },
+    {
+      "id": "ISSUE-4",
+      "type": "ScopeError",
+      "description": "The assessment includes violations related to missing transport security parameters for SCTP and usage of hostnames in AMF IP address, but these were correctly identified as out-of-scope, in line with instruction. No scope error is present.",
+      "required_action": "No action, this is noted for completeness."
+    },
+    {
+      "id": "ISSUE-5",
+      "type": "FormattingChange",
+      "description": "The corrected configuration uses mixed brace styles ':' vs '=' inconsistently (e.g., SECURITY section braces and LOG_CONFIG indentation), but this existed in original config and was not changed, so minimal-change policy is respected.",
+      "required_action": "No action needed as minimal-change policy was respected."
+    }
+  ],
+  "MustFixSummary": [
+    "Explicitly confirm and clearly document in the assessment text that 'drb_integrity' is 'no' in the original configuration as a violation.",
+    "Clearly state that original 'ciphering_algorithms' includes only 'nea0' and why this is non-compliant.",
+    "Add a comment in the corrected configuration warning about insecure '0.0.0.0' remote IP addresses that should be properly configured."
+  ]
+}
+
+=== ORIGINAL CONFIGURATION ===
+Active_gNBs = ( "gNB-OAI");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-OAI";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1 }, { sst = 2 }, { sst = 3 }) });
+
+
+    nr_cellid = 12345678L;
+
+    tr_s_preference = "f1";
+
+    local_s_address = "192.168.71.150";
+    remote_s_address = "0.0.0.0"; # multiple DUs
+    local_s_portc   = 501;
+    local_s_portd   = 2152;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2152;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+
+    ////////// AMF parameters:
+    amf_ip_address = ({ ipv4 = "oai-amf"; });
+
+    E1_INTERFACE =
+    (
+      {
+        type = "cp";
+        ipv4_cucp = "192.168.71.150";
+        port_cucp = 38462;
+        ipv4_cuup = "0.0.0.0"; # multiple CU-UPs
+        port_cuup = 38462;
+      }
+    )
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.150/24";
+    };
+  }
+);
+
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea0" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2", "nia0" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "no";
+};
+     log_config :
+     {
+       global_log_level                      ="info";
+       hw_log_level                          ="info";
+       phy_log_level                         ="info";
+       mac_log_level                         ="info";
+       rlc_log_level                         ="debug";
+       pdcp_log_level                        ="info";
+       rrc_log_level                         ="info";
+       f1ap_log_level                         ="info";
+       ngap_log_level                         ="debug";
+       sctp_log_level                         ="info";
+    };
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection phase - Security-relevant fields in the CU-CP configuration:
+
+1. Security Algorithms:
+   - ciphering_algorithms = ( "nea0" )
+   - integrity_algorithms = ( "nia2", "nia0" )
+   - drb_ciphering = "yes"
+   - drb_integrity = "no"  
+
+2. Network Configuration parameters related to security:
+   - SCTP configuration with 2 IN and 2 OUT streams but no security parameters like SCTP authentication or secure transport mentioned.
+   - IP addresses used in local_s_address, remote_s_address including zero or wildcard IPs.
+   - E1_INTERFACE control plane IPs and ports; remote IPs are "0.0.0.0".
+   - AMF IP address as "oai-amf" (hostname).
+   - NETWORK_INTERFACES IPv4 address for NG_AMF is "192.168.71.150/24".
+
+3. Logging configuration - no explicit security log levels or event granularity specified.  
+
+Standards Lookup Summary (with references):
+
+- TS 33.501 clauses 5.3.9, 5.3.10, 9.2, 9.4 require control plane data confidentiality, integrity, and replay protection over F1 and E1 interfaces (Filename: TS 133 523 - V18.2.0 5G Security Assurance Specification.pdf).
+- TS 33.501 Clause 5.3.2 requires ciphering of user plane data as per SMF policy.
+- SCTP associations over F1, E1 interfaces require secure transport as per 3GPP TS 33.117 and TS 33.523 specs.
+- Integrity protection is mandatory for control plane and user plane traffic; Integrity algorithms must be selected accordingly.
+- DRB integrity protection cannot be disabled ("drb_integrity" must be enabled) per control plane/user plane security requirements.
+- Cryptographic algorithms used must conform to allowed sets, and "nea0" (null ciphering) is generally discouraged as it means no encryption.
+- AMF interface requires support for integrity and ciphering as per TS 33.501 (Filename: ts_133501v180900p.pdf).
+- Authentication and mutual authorization must be implemented between SCP and network functions; implicit security by transport layer protection or physical means (Filename: ts_133501v180900p.pdf).
+- Log configuration should capture key security events based on O-RAN and 3GPP requirements (O-RAN.WG11.Security-Log-Management-TR.O-R004-v05.00.pdf).
+
+Violations found:
+
+1. drb_integrity = "no" violates mandatory integrity protection on DRB per TS 33.501 clauses 5.3.9 and 5.3.10.   
+   - Security Risk: Disabling integrity protection on DRB exposes user data to tampering, replay, and injection attacks.
+
+2. ciphering_algorithms = ("nea0") includes "nea0" which means no encryption and is discouraged as per 3GPP TS 33.501 clause 5.3.2.
+   - Security Risk: Using null ciphering exposes user data to interception and eavesdropping.
+
+3. remote_s_address = "0.0.0.0" and ipv4_cuup = "0.0.0.0" likely means no secure addressing or unspecified remote endpoint.
+   - Security Risk: Without proper remote addressing or secure transport configuration, network communication may be vulnerable to interception or misrouting.
+
+4. SCTP transport has no security/authentication parameters (like SCTP-AUTH or SCTP with IPsec/TLS).
+   - Security Risk: SCTP associations without security protections expose interfaces to replay, tampering, and DoS attacks.
+
+5. amf_ip_address = ({ ipv4 = "oai-amf"; }) uses a hostname instead of an IP.
+   - Security Risk: May cause resolution issues or insecure DNS resolution leading to MITM or misconnection unless properly secured.
+
+6. log_config lacks explicit security event logging or audit level security-critical configuration.
+   - Security Risk: Insufficient audit logging can reduce ability to detect security incidents.
+
+Fixing phase (minimal changes to fix violations):
+
+- Change drb_integrity from "no" to "yes".
+- Replace ciphering_algorithms from ("nea0") to at least ("nea2", "nea0") to include a proper ciphering algorithm "nea2".
+- For remote_s_address and ipv4_cuup, leaving "0.0.0.0" as is cannot be fixed due to minimal change rule and no alternative given.
+- Add a comment that suggests these addresses should be specified but not change actual values (out-of-scope recommendation).
+- Add minimal SCTP security parameters not present currently is Out-of-Scope (no additions).
+- amf_ip_address with hostname is accepted (out-of-scope for missing DNS security).
+- Log config accepted as is for now.
+
+Verification after fix:
+
+- drb_integrity = "yes"
+- ciphering_algorithms = ("nea2", "nea0") compliant with TS 33.501 requirements.
+- No other changes applied.
+
+Compliance Status: Non-Compliant
+
+Violations Found:
+1. DRB integrity is disabled (drb_integrity = "no").
+2. Only null ciphering algorithm ("nea0") is listed without stronger algorithms.
+
+Specification References:
+- 3GPP TS 33.501 clauses 5.3.9, 5.3.10, 5.3.2 (Filename: TS 133 523 - V18.2.0 - 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf)
+- 3GPP TS 33.501 (Filename: ts_133501v180900p.pdf)
+
+Recommended Code Modifications:
+- Change in security section:
+  ciphering_algorithms = ( "nea2", "nea0" );
+  drb_integrity = "yes";
+
+Security Impact Analysis:
+- Enabling DRB integrity protection prevents manipulation and replay attacks on user plane data.
+- Using "nea2" ciphering algorithm instead of purely null ciphering "nea0" ensures user plane data confidentiality.
+- These changes significantly enhance control and user plane security per mandatory 3GPP standards.
+
+Out-of-Scope Recommendations:
+- Specify remote IP addresses rather than "0.0.0.0" for secure endpoints.
+- Implement SCTP authentication or encapsulation security options.
+- Use DNS security for hostname resolution of AMF IP.
+- Enhanced security logging for audit and incident detection.
+
+
+=== CORRECTED CONFIGURATION ===
+Active_gNBs = ( "gNB-OAI");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-OAI";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1 }, { sst = 2 }, { sst = 3 }) });
+
+
+    nr_cellid = 12345678L;
+
+    tr_s_preference = "f1";
+
+    local_s_address = "192.168.71.150";
+    remote_s_address = "0.0.0.0"; # multiple DUs
+    local_s_portc   = 501;
+    local_s_portd   = 2152;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2152;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+
+    ////////// AMF parameters:
+    amf_ip_address = ({ ipv4 = "oai-amf"; });
+
+    E1_INTERFACE =
+    (
+      {
+        type = "cp";
+        ipv4_cucp = "192.168.71.150";
+        port_cucp = 38462;
+        ipv4_cuup = "0.0.0.0"; # multiple CU-UPs
+        port_cuup = 38462;
+      }
+    )
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.150/24";
+    };
+  }
+);
+
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea2", "nea0" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2", "nia0" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "yes";
+};
+     log_config :
+     {
+       global_log_level                      ="info";
+       hw_log_level                          ="info";
+       phy_log_level                         ="info";
+       mac_log_level                         ="info";
+       rlc_log_level                         ="debug";
+       pdcp_log_level                        ="info";
+       rrc_log_level                         ="info";
+       f1ap_log_level                         ="info";
+       ngap_log_level                         ="debug";
+       sctp_log_level                         ="info";
+    };
+

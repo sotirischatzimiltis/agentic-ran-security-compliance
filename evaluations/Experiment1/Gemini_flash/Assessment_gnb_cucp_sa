@@ -1,0 +1,114 @@
+=== COMPLIANCE ASSESSMENT ===
+Compliance Status: Non-Compliant
+
+Violations Found
+1.  **Null Ciphering Algorithm Enabled**: The `ciphering_algorithms` parameter includes "nea0", which corresponds to a Null ciphering algorithm. This means that if "nea0" is selected, no encryption will be applied, leaving data vulnerable.
+2.  **Null Integrity Algorithm Enabled**: The `integrity_algorithms` parameter includes "nia0", which corresponds to a Null integrity algorithm. If "nia0" is selected, no integrity protection will be applied, leaving data vulnerable to tampering.
+3.  **DRB Integrity Disabled**: The `drb_integrity` parameter is set to "no", which disables integrity protection for Data Radio Bearers (DRBs). This leaves user plane data susceptible to unauthorized modification.
+
+Specification References
+1.  **Null Ciphering Algorithm Enabled**: 3GPP TS 33.501, section 5.11.1.1, `ts_133501v180900p.pdf`. This section defines "NEA0 Null ciphering algorithm".
+2.  **Null Integrity Algorithm Enabled**: 3GPP TS 33.501, section 5.11.1.2, `ts_133501v180900p.pdf`. This section defines integrity algorithm identifier values, and by convention, "nia0" represents Null integrity, analogous to "nea0" for ciphering.
+3.  **DRB Integrity Disabled**: 3GPP TS 33.523, section 4.2.2.1.1, `TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf`. This section emphasizes "Integrity protection of RRC-signalling" which, by extension, implies the critical need for integrity protection for all critical data paths, including DRBs for user plane data. Disabling DRB integrity violates the fundamental principle of data integrity in 5G.
+
+Recommended Code Modifications
+
+```
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea2" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "yes";
+};
+```
+
+
+Security Impact Analysis
+1.  **Null Ciphering Algorithm Enabled**: Allowing "nea0" (Null ciphering) makes the communication vulnerable to eavesdropping. An attacker could intercept and read sensitive user data or control plane information without any cryptographic protection, compromising confidentiality.
+2.  **Null Integrity Algorithm Enabled**: Including "nia0" (Null integrity) in the preferred list risks leaving signaling and potentially user data unprotected against tampering. An attacker could modify messages in transit without detection, leading to unauthorized actions, denial of service, or data corruption.
+3.  **DRB Integrity Disabled**: Disabling integrity protection for DRBs means that user plane data, which carries application traffic, can be altered by an attacker without the network or the user equipment detecting the modification. This can lead to data corruption, delivery of malicious content, or other forms of service compromise.
+
+Out-of-Scope Recommendations
+1.  **Restrict `remote_s_address`**: The `remote_s_address` for the F1-C interface is set to "0.0.0.0". While this allows connectivity to multiple DUs as indicated in the comment, for enhanced security, it is recommended to restrict this IP address to a specific list of trusted DU IP addresses if feasible in the deployment scenario, rather than accepting connections from any address.
+2.  **Restrict `ipv4_cuup`**: Similarly, the `ipv4_cuup` for the E1 interface is set to "0.0.0.0". It is recommended to restrict this IP address to a specific list of trusted CU-UP IP addresses to reduce the attack surface.
+3.  **Review Log Levels**: The `rlc_log_level` and `ngap_log_level` are set to "debug". While not a security vulnerability in itself, debug logging can generate excessive data and potentially expose more system details than necessary in a production environment. It is recommended to set logging levels to "info" or higher for production deployments to optimize performance and reduce potential information leakage.
+4.  **Implement Secure Transport**: The configuration does not explicitly mention the use of IPsec or TLS for protecting interfaces like F1-C, E1-C, and NGAP. While not detectable from the surface configuration, it is highly recommended to ensure that all inter-CU and CU-AMF interfaces are protected using strong secure transport mechanisms like IPsec with IKEv2 for key management, or TLS where appropriate, as per 3GPP and O-RAN standards. This provides confidentiality and integrity for the control and user plane traffic across the network.
+5.  **Certificate Management**: There is no explicit configuration for certificate management. Implementing robust certificate management for authentication and secure communication channels is crucial.
+
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Compliance Status: Non-Compliant
+
+Violations Found:
+1.  **Ciphering Algorithm Preference**: The `ciphering_algorithms` parameter lists "nea0" (NULL algorithm) as the only option, which prioritizes no encryption for user plane traffic.
+2.  **Integrity Algorithm Inclusion**: The `integrity_algorithms` parameter includes "nia0" (NULL algorithm) as an option, which allows for control plane signaling without integrity protection.
+3.  **DRB Integrity Disabled**: The `drb_integrity` parameter is set to "no", explicitly disabling integrity protection for Data Radio Bearers (user plane).
+
+Specification References:
+1.  **For Ciphering Algorithm Preference**: TS 33.501 [3], clause 5.3.2 (Filename: `ts_138401v160300p.pdf`). This clause states that the gNB activates ciphering of user data based on the security policy sent by the SMF. While `nea0` is a valid identifier, allowing it as the sole or preferred ciphering algorithm contradicts the principle of user data confidentiality mandated by the standard.
+2.  **For Integrity Algorithm Inclusion**: TS 33.501 [3], clauses 5.3.9, 5.3.10, 9.2 and 9.4 (Filename: `TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf`). These clauses mandate integrity protection for control plane data over N2, Xn, F1-C, and E1 interfaces. Including `nia0` (NULL integrity) in the list, especially as an available option, directly violates this requirement.
+3.  **For DRB Integrity Disabled**: TS 33.501 [3], clauses 5.3.9, 5.3.10, 9.2 and 9.4 (Filename: `TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf`) and TS 33.501 [3], clause 5.3.9 (Filename: `ts_133501v180900p.pdf`). These specifications require integrity protection for user plane data (e.g., over Xn and F1-U interfaces). Setting `drb_integrity` to "no" explicitly disables this crucial security feature.
+
+Recommended Code Modifications:
+1.  Change `ciphering_algorithms = ( "nea0" );` to `ciphering_algorithms = ( "nea2", "nea1", "nea3" );`
+2.  Change `integrity_algorithms = ( "nia2", "nia0" );` to `integrity_algorithms = ( "nia2", "nia1", "nia3" );`
+3.  Change `drb_integrity = "no";` to `drb_integrity = "yes";`
+
+Security Impact Analysis:
+1.  **Ciphering Algorithm Preference**: By allowing "nea0" as the sole ciphering algorithm, the configuration fails to provide confidentiality for user plane traffic. This makes user data vulnerable to passive eavesdropping and disclosure, compromising sensitive information.
+2.  **Integrity Algorithm Inclusion**: The presence of "nia0" as an integrity algorithm option for control plane signaling exposes critical control messages to tampering, spoofing, and replay attacks. This can lead to unauthorized network access, denial-of-service, or misconfiguration of network elements, severely compromising the integrity and authenticity of control plane communications.
+3.  **DRB Integrity Disabled**: Disabling integrity protection for Data Radio Bearers means that user plane data is susceptible to unauthorized modification, insertion, or deletion. An attacker could alter user traffic, inject malicious data, or disrupt services without detection, leading to data corruption, service degradation, or security breaches impacting end-users.
+
+Out-of-Scope Recommendations:
+*   Consider implementing robust transport layer security mechanisms (e.g., IPsec/IKEv2 or TLS) for all relevant interfaces (N2, Xn, F1, E1) as per 3GPP and O-RAN specifications, as the current configuration does not explicitly configure these.
+*   Ensure that cryptographic keys are managed securely, including protection against physical attacks and secure storage, as outlined in TS 33.501 [3], clause 5.3.5.
+
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Compliance Status: Non-Compliant
+
+Violations Found
+1.  **Ciphering Algorithm for DRBs**: The `ciphering_algorithms` is set to `("nea0")`, which means "no encryption algorithm", while `drb_ciphering` is set to "yes". This effectively enables ciphering without providing a strong ciphering algorithm, leading to no actual confidentiality for user data.
+2.  **Integrity Algorithm for DRBs**: The `integrity_algorithms` list includes `("nia0")`, which means "no integrity algorithm". This allows for the possibility of user plane data being transmitted without integrity protection.
+3.  **DRB Integrity Protection**: `drb_integrity` is explicitly set to `"no"`, disabling integrity protection for user plane data.
+4.  **Wildcard IP for `remote_s_address` (F1-C Interface)**: The `remote_s_address` for the F1-C interface is set to `"0.0.0.0"`, which is a wildcard address. This allows connections from any remote DU, weakening access control.
+5.  **Wildcard IP for `ipv4_cuup` (E1-CP Interface)**: The `ipv4_cuup` for the E1-CP interface is set to `"0.0.0.0"`, a wildcard address. This allows connections from any CU-UP, weakening access control.
+
+Specification References
+1.  **Ciphering Algorithm for DRBs**: TS 33.501 [3], clause 5.3.2 (Filename: `ts_138401v160300p.pdf`); TS 33.501 [3], clause 5.5.1 (Filename: `ts_133501v180900p.pdf`).
+2.  **Integrity Algorithm for DRBs**: TS 33.501 [3], clauses 5.3.9, 5.3.10, 9.2 and 9.4 (Filename: `TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf`); TS 33.501 [3], clause 5.5.2 (Filename: `ts_133501v180900p.pdf`).
+3.  **DRB Integrity Protection**: TR 33.926 [4], clause T.2.2.4 – User plane data integrity protection (Filename: `TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf`).
+4.  **Wildcard IP for `remote_s_address`**: TS 33.501 [3], clause 9.1.2 (Filename: `ts_133501v180900p.pdf`).
+5.  **Wildcard IP for `ipv4_cuup`**: TS 33.501 [3], clauses 5.3.10 (Filename: `ts_138401v160300p.pdf` and `TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf`).
+
+Recommended Code Modifications
+1.  **Ciphering Algorithm for DRBs**: The `ciphering_algorithms` parameter should include stronger ciphering algorithms. While `nea0` is listed as supported by AMF, setting `drb_ciphering = "yes"` implies the intention for confidentiality. Relying solely on `nea0` (no encryption) negates this intention. Changed to `nea2` and `nea1` which are explicitly supported and provide confidentiality.
+2.  **Integrity Algorithm for DRBs**: The `integrity_algorithms` parameter should not include `nia0` as it provides no integrity protection. Integrity protection is mandatory. Changed to `nia2` and `nia1`.
+3.  **DRB Integrity Protection**: `drb_integrity` should be set to `"yes"` to ensure user plane data integrity protection.
+4.  **Wildcard IP for `remote_s_address`**: The `remote_s_address` should be a specific IP address of the authorized DU to enforce access control and proper authentication.
+5.  **Wildcard IP for `ipv4_cuup`**: The `ipv4_cuup` should be a specific IP address of the authorized CU-UP to enforce access control and proper authentication.
+
+Security Impact Analysis
+1.  **Ciphering Algorithm for DRBs**: By changing `ciphering_algorithms` from `("nea0")` to `("nea2", "nea1")`, user plane data will now be encrypted, protecting its confidentiality as required by TS 33.501 [3], clause 5.3.2. Without this fix, user data would be transmitted in plaintext, making it vulnerable to eavesdropping.
+2.  **Integrity Algorithm for DRBs**: Removing `nia0` from `integrity_algorithms` and ensuring `nia2` (and optionally `nia1`) are the only options, ensures that integrity protection is applied to signalling. This prevents undetected tampering and modification of control plane data, aligning with TS 33.501 [3], clauses 5.3.9, 5.3.10, 9.2, and 9.4.
+3.  **DRB Integrity Protection**: Setting `drb_integrity` to `"yes"` enables integrity protection for user plane data. This mitigates the risk of data tampering, replay attacks, and unauthorized modifications as per TR 33.926 [4], clause T.2.2.4. Without this fix, user data could be maliciously altered without detection.
+4.  **Wildcard IP for `remote_s_address`**: Replacing `"0.0.0.0"` with a specific IP address for `remote_s_address` (F1-C) enforces stricter access control, preventing unauthorized DUs from connecting to the CU-CP. This strengthens the security posture and supports the authentication requirements for the F1-C interface specified in TS 33.501 [3], clause 9.1.2.
+5.  **Wildcard IP for `ipv4_cuup`**: Replacing `"0.0.0.0"` with a specific IP address for `ipv4_cuup` (E1-CP) enforces stricter access control, preventing unauthorized CU-UPs from connecting. This ensures that only trusted CU-UPs can establish secure E1 interfaces, as required for confidentiality, integrity, and replay protection by TS 33.501 [3], clause 5.3.10.
+
+Out-of-Scope Recommendations
+*   The configuration does not explicitly enable or configure IPsec/IKEv2 for the F1-C and E1 interfaces. TS 33.501 [3] mandates IPsec ESP and IKEv2 certificates-based authentication for protecting F1-C and F1-U traffic. It is recommended to implement and configure IPsec/IKEv2 for these interfaces.
+*   The configuration does not explicitly enable or configure DTLS for the F1-C interface. TS 33.501 [3] specifies that DTLS shall be supported for F1-C to provide mutual authentication, integrity protection, replay protection, and confidentiality protection. It is recommended to implement and configure DTLS for F1-C.

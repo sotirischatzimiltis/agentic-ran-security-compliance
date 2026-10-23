@@ -1,0 +1,475 @@
+=== COMPLIANCE ASSESSMENT ===
+### **Detection Phase**
+The following security-relevant fields were identified in the `gnb-cuup.sa.f1.conf` configuration file:
+
+1. **F1 Interface Configuration**:
+   - `local_s_address = "192.168.72.161"`
+   - `remote_s_address = "192.168.72.171"`
+   - `local_s_portc = 501`
+   - `local_s_portd = 2153`
+   - `remote_s_portc = 500`
+   - `remote_s_portd = 2153`
+   - `SCTP_INSTREAMS = 2`
+   - `SCTP_OUTSTREAMS = 2`
+
+2. **E1 Interface Configuration**:
+   - `ipv4_cucp = "192.168.71.150"`
+   - `ipv4_cuup = "192.168.71.161"`
+
+3. **NGU Interface Configuration**:
+   - `GNB_IPV4_ADDRESS_FOR_NGU = "192.168.71.161/24"`
+   - `GNB_PORT_FOR_S1U = 2152`
+
+4. **Logging Configuration**:
+   - `global_log_level = "info"`
+   - `pdcp_log_level = "info"`
+   - `f1ap_log_level = "info"`
+   - `ngap_log_level = "info"`
+
+### **Compliance Assessment Phase**
+#### **Violations Found**
+1. **Missing Integrity, Confidentiality, and Replay Protection for F1 Interface**
+   - **Standard Reference**:
+     - **3GPP TS 33.501, Clause 5.3.10** (Filename: `ts_133501v180900p.pdf`)
+     - **3GPP TS 33.523, Clause 6.2.2.1.3** (Filename: `TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf`)
+   - **Requirement**: The F1-C and F1-U interfaces **must** support **confidentiality, integrity, and replay protection**.
+   - **Risk**: The current configuration does not explicitly enable or configure **IPsec, DTLS, or any other security mechanism** for the F1 interface. This exposes control and user plane traffic to **eavesdropping, tampering, and replay attacks**.
+   - **Fix**: While the configuration does not explicitly define security mechanisms, it **must** ensure that **IPsec or DTLS is enabled** for the F1 interface. This requires adding or ensuring the presence of security profiles for these interfaces.
+
+2. **Missing Integrity, Confidentiality, and Replay Protection for E1 Interface**
+   - **Standard Reference**:
+     - **3GPP TS 33.501, Clause 5.3.10** (Filename: `ts_133501v180900p.pdf`)
+     - **3GPP TS 33.523, Clause 6.2.2.1.3** (Filename: `TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf`)
+   - **Requirement**: The E1 interface **must** be **confidentiality, integrity, and replay protected**.
+   - **Risk**: The current configuration does not explicitly enable or configure **IPsec or DTLS** for the E1 interface. This exposes control plane traffic between the CU-CP and CU-UP to **eavesdropping, tampering, and replay attacks**.
+   - **Fix**: While the configuration does not explicitly define security mechanisms, it **must** ensure that **IPsec or DTLS is enabled** for the E1 interface.
+
+3. **Missing User Plane Integrity and Ciphering for NGU Interface**
+   - **Standard Reference**:
+     - **3GPP TS 33.501, Clause 5.3.2** (Filename: `ts_133501v180900p.pdf`)
+     - **3GPP TS 33.523, Clause 6.2.2.1.7** (Filename: `ts_138401v160300p.pdf`)
+   - **Requirement**: The NGU interface **must** support **ciphering and integrity protection** for user plane traffic.
+   - **Risk**: The current configuration does not explicitly enable or configure **user plane integrity and ciphering** for the NGU interface. This exposes user plane traffic to **eavesdropping and tampering**.
+   - **Fix**: While the configuration does not explicitly define security mechanisms, it **must** ensure that **user plane integrity and ciphering are enabled** for the NGU interface.
+
+4. **SCTP Security Configuration**
+   - **Standard Reference**:
+     - **3GPP TS 33.501, Clause 5.3.10** (Filename: `ts_133501v180900p.pdf`)
+     - **3GPP TS 33.210, Clause 6.2** (Filename: `ts_133501v180900p.pdf`)
+   - **Requirement**: SCTP traffic over F1 and E1 interfaces **must** be **integrity, confidentiality, and replay protected** using **IPsec or DTLS**.
+   - **Risk**: The current configuration does not explicitly enable or configure **IPsec or DTLS** for SCTP traffic. This exposes SCTP traffic to **eavesdropping, tampering, and replay attacks**.
+   - **Fix**: While the configuration does not explicitly define security mechanisms, it **must** ensure that **IPsec or DTLS is enabled** for SCTP traffic.
+
+5. **Logging Configuration**
+   - **Standard Reference**:
+     - **3GPP TS 33.117, Clause 4.2.3.2.4** (Filename: `ts_138401v160300p.pdf`)
+   - **Requirement**: Logging **must** capture **security-relevant events** (e.g., authentication failures, security protocol negotiations).
+   - **Risk**: The current logging configuration (`info` level) may not capture **security-relevant events** in sufficient detail.
+   - **Fix**: While the configuration does not violate any explicit logging requirement, it is recommended to **increase logging verbosity for security-relevant events** (e.g., `debug` level for security protocols).
+
+### **Fixing Phase**
+#### **Recommended Code Modifications**
+1. **F1 Interface Security**:
+   - **Add IPsec or DTLS Configuration**:
+     - While the configuration does not explicitly define security mechanisms, it **must** ensure that **IPsec or DTLS is enabled** for the F1 interface. This requires coordination with the **CU-CP and DU configurations** to enable security profiles.
+     - **Example (if security profiles were to be added)**:
+       ```plaintext
+       F1_INTERFACE_SECURITY : {
+           enable_ipsec = "yes";
+           ipsec_profile = "profile_1";
+       };
+       ```
+
+2. **E1 Interface Security**:
+   - **Add IPsec or DTLS Configuration**:
+     - While the configuration does not explicitly define security mechanisms, it **must** ensure that **IPsec or DTLS is enabled** for the E1 interface.
+     - **Example (if security profiles were to be added)**:
+       ```plaintext
+       E1_INTERFACE_SECURITY : {
+           enable_dtls = "yes";
+           dtls_profile = "profile_1";
+       };
+       ```
+
+3. **NGU Interface Security**:
+   - **Enable User Plane Integrity and Ciphering**:
+     - While the configuration does not explicitly define security mechanisms, it **must** ensure that **user plane integrity and ciphering are enabled** for the NGU interface.
+     - **Example (if security profiles were to be added)**:
+       ```plaintext
+       NGU_INTERFACE_SECURITY : {
+           enable_integrity = "yes";
+           enable_ciphering = "yes";
+       };
+       ```
+
+4. **SCTP Security**:
+   - **Enable IPsec or DTLS for SCTP**:
+     - While the configuration does not explicitly define security mechanisms, it **must** ensure that **IPsec or DTLS is enabled** for SCTP traffic.
+     - **Example (if security profiles were to be added)**:
+       ```plaintext
+       SCTP_SECURITY : {
+           enable_ipsec = "yes";
+           ipsec_profile = "profile_1";
+       };
+       ```
+
+5. **Logging Configuration**:
+   - **Increase Logging Verbosity for Security-Relevant Events**:
+     - While not a violation, it is recommended to **increase logging verbosity** for security-relevant events.
+     - **Example**:
+       ```plaintext
+       log_config : {
+           global_log_level = "debug";
+           pdcp_log_level   = "debug";
+           f1ap_log_level   = "debug";
+           ngap_log_level   = "debug";
+       };
+       ```
+
+### **Security Impact Analysis**
+1. **F1 Interface**:
+   - **Impact**: Without **integrity, confidentiality, and replay protection**, the F1 interface is vulnerable to **eavesdropping, tampering, and replay attacks**. This could lead to **unauthorized access, data leaks, and service disruption**.
+
+2. **E1 Interface**:
+   - **Impact**: Without **integrity, confidentiality, and replay protection**, the E1 interface is vulnerable to **eavesdropping, tampering, and replay attacks**. This could lead to **unauthorized control plane manipulation and service disruption**.
+
+3. **NGU Interface**:
+   - **Impact**: Without **user plane integrity and ciphering**, the NGU interface is vulnerable to **eavesdropping and tampering**. This could lead to **data leaks and unauthorized access to user traffic**.
+
+4. **SCTP Traffic**:
+   - **Impact**: Without **IPsec or DTLS**, SCTP traffic is vulnerable to **eavesdropping, tampering, and replay attacks**. This could lead to **unauthorized access and service disruption**.
+
+5. **Logging**:
+   - **Impact**: Insufficient logging may result in **undocumented security events**, making it difficult to **detect and respond to attacks**.
+
+### **Out-of-Scope Recommendations**
+1. **Certificate-Based Authentication**:
+   - While not explicitly required in the configuration, **certificate-based authentication** for F1, E1, and NGU interfaces is recommended for enhanced security.
+
+2. **TLS for Management Interfaces**:
+   - **TLS** should be enabled for all management interfaces to ensure **confidentiality and integrity**.
+
+3. **Regular Security Audits**:
+   - Conduct **regular security audits** to ensure compliance with **3GPP, O-RAN, and ETSI standards**.
+
+4. **Automated Key Rotation**:
+   - Implement **automated key rotation** for **IPsec and DTLS** to reduce the risk of **key compromise**.
+
+### **Final Corrected Configuration**
+No explicit changes were applied to the configuration because the **security mechanisms (e.g., IPsec, DTLS) are not defined in the configuration file itself**. However, the **absence of these mechanisms violates 3GPP security requirements**. The configuration **must** be updated to include security profiles for F1, E1, and NGU interfaces.
+
+### **Compliance Status**
+**Non-Compliant**
+- The configuration **does not explicitly enable or configure** the **mandatory security mechanisms** (e.g., IPsec, DTLS) for F1, E1, and NGU interfaces, which violates **3GPP TS 33.501 and TS 33.523** requirements.
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+### **Compliance Assessment Report**
+**File:** `gnb-cuup.sa.f1.conf`
+**Network Function:** CU-UP
+
+## **1. Detection Phase**
+The following security-relevant fields were identified in the configuration:
+
+| **Field**                     | **Value**                     | **Relevance**                                                                 |
+|-------------------------------|-------------------------------|------------------------------------------------------------------------------|
+| `tr_s_preference`             | `"f1"`                        | Specifies transport preference for F1 interface.                            |
+| `local_s_address`             | `"192.168.72.161"`            | Local IP address for F1 interface.                                          |
+| `remote_s_address`            | `"192.168.72.171"`            | Remote IP address for F1 interface.                                         |
+| `local_s_portc`               | `501`                         | Local port for F1-C (control plane).                                        |
+| `local_s_portd`               | `2153`                        | Local port for F1-U (user plane).                                           |
+| `remote_s_portc`              | `500`                         | Remote port for F1-C (control plane).                                       |
+| `remote_s_portd`              | `2153`                        | Remote port for F1-U (user plane).                                          |
+| `SCTP_INSTREAMS`              | `2`                           | Number of SCTP input streams.                                               |
+| `SCTP_OUTSTREAMS`             | `2`                           | Number of SCTP output streams.                                              |
+| `E1_INTERFACE`                | `ipv4_cucp`, `ipv4_cuup`      | E1 interface configuration (CU-CP and CU-UP IPs).                           |
+| `GNB_IPV4_ADDRESS_FOR_NG_AMF` | `"192.168.71.161/24"`         | NG interface IP for AMF communication.                                      |
+| `GNB_IPV4_ADDRESS_FOR_NGU`    | `"192.168.71.161/24"`         | NG interface IP for user plane communication.                               |
+| `GNB_PORT_FOR_S1U`            | `2152`                        | Port for S1U interface.                                                     |
+| `log_config`                  | `global_log_level = "info"`   | Logging configuration for security events.                                  |
+
+## **2. Compliance Assessment Phase**
+### **Violations Found**
+#### **1. Lack of Integrity, Confidentiality, and Replay Protection for F1-C and F1-U Interfaces**
+- **Standard Reference:**
+  - **3GPP TS 33.501 [3], clauses 5.3.9, 5.3.10, 9.2, and 9.4** (Filename: `TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf`)
+  - **3GPP TS 33.501 [3], clause 5.3.10** (Filename: `ts_133501v180900p.pdf`)
+
+- **Issue:**
+  - The F1-C and F1-U interfaces **must** support **confidentiality, integrity, and replay protection** (e.g., IPsec or DTLS).
+  - The configuration does not explicitly enable or configure these protections for the F1 interface.
+
+- **Security Risk:**
+  - Unprotected F1-C/F1-U interfaces are vulnerable to **eavesdropping, tampering, and replay attacks**, compromising control and user plane data.
+
+- **Fix:**
+  - Explicitly configure **IPsec or DTLS** for F1-C and F1-U interfaces.
+  - Add parameters for **integrity protection, confidentiality, and replay protection** in the SCTP configuration.
+
+#### **2. Lack of Security Configuration for E1 Interface**
+- **Standard Reference:**
+  - **3GPP TS 33.501 [3], clause 9.8.3** (Filename: `ts_133501v180900p.pdf`)
+
+- **Issue:**
+  - The E1 interface **must** support **IPsec ESP with IKEv2 certificates** or **DTLS** for mutual authentication, integrity, replay protection, and confidentiality.
+  - The configuration does not include any security mechanisms for the E1 interface.
+
+- **Security Risk:**
+  - Unprotected E1 interfaces are vulnerable to **man-in-the-middle attacks, data tampering, and unauthorized access**.
+
+- **Fix:**
+  - Add **IPsec or DTLS configuration** for the E1 interface.
+  - Ensure **mutual authentication** is enabled.
+
+#### **3. Lack of User Plane Integrity Protection for NG-U and F1-U**
+- **Standard Reference:**
+  - **3GPP TS 33.501 [3], clauses 5.3.9, 9.3, and 9.4** (Filename: `TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification (SCAS); Split gNB product classes (3GPP TS 33.523 version 18.2.0 Release 18).pdf`)
+
+- **Issue:**
+  - The **NG-U and F1-U interfaces** must support **integrity, confidentiality, and replay protection** for user plane data.
+  - The configuration does not explicitly enable these protections.
+
+- **Security Risk:**
+  - Unprotected user plane data is vulnerable to **tampering, eavesdropping, and replay attacks**.
+
+- **Fix:**
+  - Enable **integrity protection** for NG-U and F1-U interfaces.
+  - Ensure **confidentiality and replay protection** are configured.
+
+#### **4. Insufficient Logging for Security Events**
+- **Standard Reference:**
+  - **O-RAN.WG11.TS.STS-R004-v11.00.00, REQ-SEC-SLM-GSE-1 to REQ-SEC-SLM-GSE-6** (Filename: `O-RAN.WG11.TS.STS-R004-v11.00.pdf`)
+
+- **Issue:**
+  - The logging configuration (`log_config`) does not explicitly ensure **security event logging** (e.g., authentication failures, unauthorized access attempts).
+  - Current logging levels (`info`) may not capture critical security events.
+
+- **Security Risk:**
+  - Lack of security event logging hinders **forensic analysis, incident detection, and compliance auditing**.
+
+- **Fix:**
+  - Update `log_config` to explicitly log **security events** (e.g., authentication failures, unauthorized access attempts).
+  - Set logging levels to **`debug` or `warning`** for security-relevant modules.
+
+## **3. Fixing Phase**
+### **Recommended Code Modifications**
+#### **1. F1 Interface Security Configuration**
+```diff
+SCTP :
+{
+    # Number of streams to use in input/output
+    SCTP_INSTREAMS  = 2;
+    SCTP_OUTSTREAMS = 2;
++   # Security configuration for F1-C and F1-U
++   F1_C_SECURITY = {
++       IPSEC_ENABLED = "yes";
++       DTLS_ENABLED = "no";
++       INTEGRITY_PROTECTION = "yes";
++       CONFIDENTIALITY_PROTECTION = "yes";
++       REPLAY_PROTECTION = "yes";
++   };
++   F1_U_SECURITY = {
++       IPSEC_ENABLED = "yes";
++       DTLS_ENABLED = "no";
++       INTEGRITY_PROTECTION = "yes";
++       CONFIDENTIALITY_PROTECTION = "yes";
++       REPLAY_PROTECTION = "yes";
++   };
+};
+```
+
+#### **2. E1 Interface Security Configuration**
+```diff
+E1_INTERFACE =
+(
+  {
+    type = "up";
+    ipv4_cucp = "192.168.71.150";
+    ipv4_cuup = "192.168.71.161";
++   SECURITY = {
++       IPSEC_ENABLED = "yes";
++       IKEV2_CERT_AUTH = "yes";
++       DTLS_ENABLED = "no";
++       INTEGRITY_PROTECTION = "yes";
++       CONFIDENTIALITY_PROTECTION = "yes";
++       REPLAY_PROTECTION = "yes";
++   };
+  }
+)
+```
+
+#### **3. NG-U and F1-U Integrity Protection**
+```diff
+NETWORK_INTERFACES :
+{
+    GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.161/24";
+    GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.71.161/24";
+    GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
++   NGU_SECURITY = {
++       INTEGRITY_PROTECTION = "yes";
++       CONFIDENTIALITY_PROTECTION = "yes";
++       REPLAY_PROTECTION = "yes";
++   };
+};
+```
+
+#### **4. Logging Configuration for Security Events**
+```diff
+log_config : {
+-  global_log_level = "info";
++  global_log_level = "debug";
+-  pdcp_log_level   = "info";
++  pdcp_log_level   = "warning";
+   f1ap_log_level   = "info";
+   ngap_log_level   = "info";
++  security_log_level = "debug";
++  security_log_file = "/var/log/cuup_security.log";
+};
+```
+
+## **4. Security Impact Analysis**
+| **Violation**                          | **Security Risk**                                                                 | **Impact**                                                                 |
+|----------------------------------------|----------------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| Unprotected F1-C/F1-U interfaces       | Eavesdropping, tampering, replay attacks                                         | Compromised control and user plane data.                                  |
+| Unprotected E1 interface               | Man-in-the-middle attacks, unauthorized access                                   | Compromised signaling between CU-CP and CU-UP.                            |
+| Lack of user plane integrity protection | Tampering, eavesdropping, replay attacks                                         | Compromised user data integrity and confidentiality.                      |
+| Insufficient security logging          | Hinders forensic analysis, incident detection, and compliance auditing           | Delayed response to security incidents.                                   |
+
+## **5. Out-of-Scope Recommendations**
+1. **Certificate Management:**
+   - Implement **X.509 certificates** for mutual authentication on E1 and F1 interfaces.
+   - Use **Hardware Security Modules (HSMs)** for secure key storage.
+
+2. **Network Segmentation:**
+   - Isolate **F1, E1, and NG interfaces** in separate VLANs to limit attack surfaces.
+
+3. **Real-Time Monitoring:**
+   - Deploy **Intrusion Detection Systems (IDS)** to monitor interface traffic for anomalies.
+
+4. **Automated Key Rotation:**
+   - Implement **automated key rotation** for IPsec and DTLS to reduce key compromise risks.
+
+## **6. Compliance Status**
+**Non-Compliant**
+*(Fixes are required for F1, E1, NG-U, and logging configurations.)*
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+## **Compliance Assessment Report**
+
+### **Detection Phase**
+The following security-relevant fields were identified in the `gnb-cuup.sa.f1.conf` configuration file:
+
+1. **F1 Interface Configuration**
+   - `local_s_address`, `remote_s_address`
+   - `local_s_portc`, `local_s_portd`, `remote_s_portc`, `remote_s_portd`
+   - `SCTP_INSTREAMS`, `SCTP_OUTSTREAMS`
+
+2. **E1 Interface Configuration**
+   - `ipv4_cucp`, `ipv4_cuup`
+
+3. **NG-U and NG-C Interface Configuration**
+   - `GNB_IPV4_ADDRESS_FOR_NG_AMF`
+   - `GNB_IPV4_ADDRESS_FOR_NGU`
+   - `GNB_PORT_FOR_S1U`
+
+4. **Logging Configuration**
+   - `global_log_level`, `pdcp_log_level`, `f1ap_log_level`, `ngap_log_level`
+
+### **Violations Found**
+
+#### **1. Lack of Security Protection for F1 Interface (Control and User Plane)**
+- **Standard Reference**:
+  - **3GPP TS 33.501, Clause 9.8.2** (F1 interface security mechanisms)
+    - *"The F1 interface shall be protected using IPsec ESP or DTLS with mutual authentication, integrity, confidentiality, and replay protection."*
+    - **Filename**: `ts_133501v180900p.pdf`
+  - **ETSI TS 133 501, Clause M.3.3.2**
+    - *"IKEv2 Pre-shared Secret Key (PSK) authentication shall be supported for F1 interface security."*
+    - **Filename**: `ts_133501v180900p.pdf`
+
+- **Security Risk**:
+  - The F1 interface is exposed to **eavesdropping, tampering, and replay attacks** due to the absence of **IPsec, DTLS, or IKEv2** configuration.
+  - **SCTP parameters alone do not provide cryptographic protection**.
+
+- **Fix Required**:
+  - **No explicit security parameters are present** in the configuration.
+  - **Out-of-Scope Recommendation**: Add `IPsec`, `DTLS`, or `IKEv2` configuration for F1 interface protection.
+
+#### **2. Lack of Security Protection for E1 Interface (Control Plane)**
+- **Standard Reference**:
+  - **3GPP TS 33.501, Clause 9.8.3**
+    - *"The E1 interface shall be protected using IPsec ESP or DTLS with mutual authentication, integrity, confidentiality, and replay protection."*
+    - **Filename**: `ts_133501v180900p.pdf`
+  - **TS 33.523, Clause 6.2.2.1.3**
+    - *"The E1 interface between CU-CP and CU-UP is confidentiality, integrity, and replay-protected as specified in TS 33.501, clauses 5.3.10."*
+    - **Filename**: `TS 133 523 - V18.2.0.pdf`
+
+- **Security Risk**:
+  - The E1 interface is exposed to **control plane tampering, eavesdropping, and replay attacks** due to the absence of **IPsec or DTLS** configuration.
+
+- **Fix Required**:
+  - **No explicit security parameters are present** in the configuration.
+  - **Out-of-Scope Recommendation**: Add `IPsec` or `DTLS` configuration for E1 interface protection.
+
+#### **3. Lack of User Plane Security for NG-U and F1-U Interfaces**
+- **Standard Reference**:
+  - **3GPP TS 33.501, Clause 5.3.9, 9.3, 9.4**
+    - *"The gNB supports confidentiality, integrity, and replay protection on the gNB DU-CU F1-U interface for user plane."*
+    - **Filename**: `ts_138401v160300p.pdf`
+  - **TS 33.523, Clause 6.2.2.1.4**
+    - *"The transport of user data over N3 is integrity, confidentiality, and replay-protected."*
+    - **Filename**: `TS 133 523 - V18.2.0.pdf`
+
+- **Security Risk**:
+  - The **NG-U and F1-U interfaces** are exposed to **user plane tampering, eavesdropping, and replay attacks** due to the absence of **ciphering and integrity protection**.
+
+- **Fix Required**:
+  - **No explicit security parameters are present** in the configuration.
+  - **Out-of-Scope Recommendation**: Enable **UP ciphering and integrity protection** for NG-U and F1-U interfaces.
+
+#### **4. Insecure Logging Configuration**
+- **Standard Reference**:
+  - **O-RAN.WG11.TS.STS-R004, Clause 5.3.8.11.7**
+    - *"Logging of general security events must be enabled to detect and respond to security incidents."*
+    - **Filename**: `O-RAN.WG11.TS.STS-R004-v11.00.pdf`
+
+- **Security Risk**:
+  - **Insufficient logging** (`info` level) may **miss critical security events**, hindering **incident detection and forensic analysis**.
+
+- **Fix Required**:
+  - **No explicit violation** in the configuration (since `info` is a valid log level).
+  - **Out-of-Scope Recommendation**: Increase log verbosity for **security-critical events** (e.g., `debug` for `f1ap_log_level` and `ngap_log_level`).
+
+### **Compliance Status**
+**Non-Compliant** (Violations detected in **F1, E1, and NG-U interface security**).
+
+### **Recommended Code Modifications**
+**No in-configuration fixes are possible** because the required security mechanisms (**IPsec, DTLS, IKEv2, UP ciphering/integrity protection**) are **not configurable via this file format**. However, the following **out-of-scope recommendations** are provided:
+
+#### **Out-of-Scope Recommendations**
+1. **F1 Interface Security**
+   - Configure **IPsec ESP** or **DTLS** for F1-C and F1-U interfaces.
+   - Enable **IKEv2 PSK authentication** for F1-C.
+
+2. **E1 Interface Security**
+   - Configure **IPsec ESP** or **DTLS** for E1 interface protection.
+
+3. **NG-U and F1-U User Plane Security**
+   - Enable **UP ciphering and integrity protection** for NG-U and F1-U interfaces.
+
+4. **Logging Enhancement**
+   - Increase log verbosity for **security-critical events** (e.g., `f1ap_log_level = "debug"`).
+
+### **Security Impact Analysis**
+| **Violation** | **Impact** | **Likelihood** | **Risk Level** |
+|--------------|-----------|---------------|---------------|
+| **Unprotected F1 Interface** | High (Eavesdropping, Tampering, Replay Attacks) | High | **Critical** |
+| **Unprotected E1 Interface** | High (Control Plane Tampering, Eavesdropping) | High | **Critical** |
+| **Unprotected NG-U/F1-U User Plane** | High (User Data Tampering, Eavesdropping) | High | **Critical** |
+| **Insufficient Logging** | Medium (Delayed Incident Detection) | Medium | **High** |
+
+### **Corrected Configuration**
+**No changes were made to the configuration file** because the required security mechanisms (**IPsec, DTLS, IKEv2, UP ciphering/integrity protection**) are **not configurable via this file format**. The **out-of-scope recommendations** above must be implemented at the **network infrastructure level**.
+

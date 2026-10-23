@@ -1,0 +1,198 @@
+Filename: cu_gnb.conf
+Revision iteration: 1
+
+=== REFLECTION OUTPUT (JSON) ===
+{
+  "OverallAssessment": "The assessment correctly identified all relevant security violations within the scope-defined configuration and applied minimal necessary corrections. No errors in citations or security impact statements were found, and the minimal-change principle was respected.",
+  "Issues": [],
+  "MustFixSummary": [
+    "Change drb_integrity from \"no\" to \"yes\" to enable DRB integrity protection.",
+    "Replace the null ciphering algorithm \"nea0\" with a secure algorithm such as \"nea2\" in ciphering_algorithms.",
+    "Remove the null integrity algorithm \"nia0\" from integrity_algorithms, leaving only valid integrity algorithms such as \"nia2\"."
+  ]
+}
+
+=== ORIGINAL CONFIGURATION ===
+Active_gNBs = ( "gNB-Eurecom-CU");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-Eurecom-CU";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1 }) });
+
+    nr_cellid = 12345678L;
+
+    tr_s_preference = "f1";
+
+    local_s_address = "127.0.0.4";
+    remote_s_address = "127.0.0.3";
+    local_s_portc   = 501;
+    local_s_portd   = 2152;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2152;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+
+    ////////// AMF parameters:
+    amf_ip_address = ({ ipv4 = "192.168.69.131"; });
+
+    NETWORK_INTERFACES :
+    {
+
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.18.207";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.18.207";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+  }
+);
+
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea0" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2", "nia0" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "no";
+};
+     log_config :
+     {
+       global_log_level                      ="info";
+       hw_log_level                          ="info";
+       phy_log_level                         ="info";
+       mac_log_level                         ="info";
+       rlc_log_level                         ="debug";
+       pdcp_log_level                        ="info";
+       rrc_log_level                         ="info";
+       f1ap_log_level                         ="debug";
+       ngap_log_level                         ="debug";
+    };
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection phase - Security relevant fields and values found in the CU configuration:
+
+- security:
+  - ciphering_algorithms = ( "nea0" )
+  - integrity_algorithms = ( "nia2", "nia0" )
+  - drb_ciphering = "yes"
+  - drb_integrity = "no"
+
+All other parameters in the config regarding IP addresses, ports, SCTP streams, logging levels do not present explicit security parameters other than the above.
+
+Compliance Assessment:
+
+1. DRB ciphering and integrity:
+   - drb_ciphering = "yes" is allowed.
+   - drb_integrity = "no" disables integrity protection on DRBs. From TS 23.502 and TS 33.501 (ts_138300v170000p.pdf), integrity protection must be configured for DRBs if required by policy. Null integrity protection ("no") on DRB is a security risk as it leaves user plane data vulnerable to tampering and replay attacks.
+
+2. Ciphering algorithms:
+   - "nea0" is a null ciphering algorithm (ts_133501v180900p.pdf D.1 Null ciphering).
+   - Using only "nea0" means no actual ciphering is enforced which is a security risk.
+   - According to TS 33.501 (ts_138401v160300p.pdf) and TS 33.511 (ts_133511v170100p.pdf), the gNB should be configured to use non-null ciphering algorithms from an allowed list (e.g., nea1, nea2, nea3).
+
+3. Integrity algorithms:
+   - "nia2" and "nia0" are present.
+   - Nia0 is null integrity algorithm.
+   - Presence of valid integrity algorithms like "nia2" is positive, but combined with drb_integrity = "no" means DRB integrity is disabled.
+   - According to standards, lists of allowed algorithms should exclude null algorithms or at least not accept null integrity for DRBs.
+
+4. F1 interface security:
+   - No explicit mention of IPsec or DTLS setup in config.
+   - Standards (ts_133501v180900p.pdf) require IPsec ESP and IKEv2 with certificates for F1 interface protection.
+   - But per instructions, missing features do not count as violations, so no compliance failure here, only recommendation.
+
+5. SCTP security:
+   - SCTP streams configured correctly (min. 2 streams).
+   - No explicit secure transport parameters, but no violation strictly from config.
+
+6. Logging levels:
+   - Logging levels set, no violation seen.
+
+Summary of violations:
+- drb_integrity = "no" disables required integrity protection on user plane DRBs.
+- ciphering_algorithms includes null ciphering "nea0" only, disallowing secure ciphering of user plane.
+- integrity_algorithms includes "nia0" (null integrity) which is not recommended in allowed lists per best practices.
+
+Fixing phase with minimal changes:
+
+- Change drb_integrity from "no" to "yes" (enable integrity protection for DRBs).
+- Change ciphering_algorithms from ("nea0") to ("nea2") which is a valid secure ciphering algorithm. (Assuming "nea2" is valid and supported per standards ts_133501v180900p.pdf Annex D)
+- Change integrity_algorithms from ("nia2", "nia0") to ("nia2") to remove null integrity.
+  
+This ensures user plane is protected by ciphering and integrity as per TS 23.502 and TS 33.501 (ts_138300v170000p.pdf, ts_138401v160300p.pdf), and prevents security risk from null algorithms.
+
+Verification phase will be performed after applying fixes.
+
+Compliance Status: Non-Compliant
+
+Violations Found:
+- Null ciphering algorithm "nea0" used (no encryption).
+- Null integrity algorithm "nia0" in list and DRB integrity disabled.
+- DRB integrity protection explicitly disabled ("no") causing user plane data integrity to be violated.
+
+Specification References:
+- TS 23.502 clause on user plane DRB integrity protection (ts_138300v170000p.pdf)
+- TS 33.501 clauses on ciphering and integrity requirements and algorithms lists (ts_138401v160300p.pdf, ts_133511v170100p.pdf)
+- TS 33.501 Annex D on null ciphering disallowed for secure operation (ts_133501v180900p.pdf)
+
+Recommended Code Modifications:
+
+
+Security Impact Analysis:
+- Using null ciphering (nea0) exposes user data to interception and eavesdropping.
+- Disabling integrity protection on DRBs exposes to data modification and replay attacks.
+- Null integrity algorithms undermine protection of control data integrity.
+- Enabling robust ciphering and mandatory integrity protection on DRBs significantly improves the confidentiality and integrity of user plane traffic, reducing risk of attacks and ensuring compliance with 3GPP and O-RAN standards for secure operation.
+
+Out-of-Scope Recommendations:
+- Configure IPsec ESP and IKEv2 (certificate-based) on F1 interface.
+- Implement mutual authentication and replay detection via DTLS on F1-C.
+- Enable logging of security events with appropriate granularity and secure storage.
+
+
+=== CORRECTED CONFIGURATION ===
+...
+security = {
+  # preferred ciphering algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nea0, nea1, nea2, nea3
+  ciphering_algorithms = ( "nea2" );
+
+  # preferred integrity algorithms
+  # the first one of the list that an UE supports in chosen
+  # valid values: nia0, nia1, nia2, nia3
+  integrity_algorithms = ( "nia2" );
+
+  # setting 'drb_ciphering' to "no" disables ciphering for DRBs, no matter
+  # what 'ciphering_algorithms' configures; same thing for 'drb_integrity'
+  drb_ciphering = "yes";
+  drb_integrity = "yes";
+};
+...

@@ -1,0 +1,166 @@
+Filename: gnb-cuup.sa.f1.conf
+Revision iteration: 1
+
+=== REFLECTION OUTPUT (JSON) ===
+{
+  "OverallAssessment": "The assessment is accurate and comprehensive, correctly identifying all in-scope violations and adhering to minimal-change and scope control policies.",
+  "Issues": [],
+  "MustFixSummary": []
+}
+
+=== ORIGINAL CONFIGURATION ===
+Active_gNBs = ( "gNB-OAI");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+    gNB_CU_UP_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-OAI";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1, sd = 0xffffff }) });
+
+
+    tr_s_preference = "f1";
+
+    local_s_address = "192.168.72.161";
+    remote_s_address = "192.168.72.171";
+    local_s_portc   = 501;
+    local_s_portd   = 2153;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2153;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+    E1_INTERFACE =
+    (
+      {
+        type = "up";
+        ipv4_cucp = "192.168.71.150";
+        ipv4_cuup = "192.168.71.161";
+      }
+    )
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.161/24";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.71.161/24";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+  }
+);
+
+log_config : {
+  global_log_level = "info";
+  pdcp_log_level   = "info";
+  f1ap_log_level   = "info";
+  ngap_log_level   = "info";
+};
+
+
+=== COMPLIANCE ASSESSMENT ===
+Compliance Status: Non-Compliant
+
+Violations Found:
+1.  **F1-U User Plane Port Misconfiguration**: The `local_s_portd` and `remote_s_portd` parameters for the F1-U (user plane) interface are configured to `2153`.
+2.  **F1-C Control Plane Ports Using Well-Known ISAKMP/IKE Ports**: The `local_s_portc` and `remote_s_portc` parameters for the F1-C (control plane) interface are configured to `501` and `500` respectively. These ports are IANA-assigned for ISAKMP/IKE and IKE NAT-Traversal.
+
+Specification References:
+1.  **3GPP TS 29.281**: "General Packet Radio Service (GPRS) Tunnelling Protocol User Plane (GTP-U)", section 4.1.2.1: "The UDP port number for GTP-U is 2152." This standard applies to GTP-U, which is used for the F1-U interface.
+2.  **IETF RFC 6335**: "Port Numbers", section 6: "Assignment of Port Numbers": This RFC outlines principles for assigning port numbers, generally advising against using well-known ports for non-standard services to avoid conflicts and misidentification.
+    *   **3GPP TS 38.401**: "NG-RAN; Architecture description", section 8.1.1 (F1-C Transport): While 3GPP does not specify fixed port numbers for F1-C (SCTP), security best practices dictate not using reserved well-known ports for unrelated services.
+
+Recommended Code Modifications:
+1.  **F1-U Port Fix**: Change `local_s_portd = 2153;` to `local_s_portd = 2152;` and `remote_s_portd = 2153;` to `remote_s_portd = 2152;` to align with the standard GTP-U port.
+2.  **F1-C Port Fix**: Change `local_s_portc = 501;` to `local_s_portc = 50001;` and `remote_s_portc = 500;` to `remote_s_portc = 50000;`. This moves the F1-C ports to the dynamic/private port range, mitigating potential conflicts and misidentification with ISAKMP/IKE services.
+
+Security Impact Analysis:
+1.  **F1-U Port Misconfiguration**: Using port `2153` instead of the standard `2152` for GTP-U on the F1-U interface directly impacts interoperability. The gNB-CU-UP would be unable to establish or maintain user plane tunnels with its peer gNB-DU, leading to service disruption. This is a critical functional security risk as it prevents legitimate traffic from flowing and could be exploited for denial-of-service by misdirecting traffic.
+2.  **F1-C Control Plane Ports Using Well-Known ISAKMP/IKE Ports**: Configuring F1-C SCTP on ports `500` (ISAKMP/IKE) and `501` (IKE NAT-T) is a security hygiene violation. While 3GPP does not mandate specific F1-C ports, using ports reserved for established security protocols can lead to:
+    *   **Port Conflicts**: Potential operational issues if other services or applications that legitimately use these ports are present or introduced.
+    *   **Misidentification & Reconnaissance**: Network security tools or attackers scanning for common services might misidentify the F1-C interface as an IKE endpoint, potentially leading to misconfigured security policies or targeted attacks against non-existent IKE vulnerabilities.
+    *   **Increased Attack Surface (Perceived)**: Although the underlying F1-C protocol is different, the use of well-known ports for unrelated services broadens the perceived attack surface by associating the service with known security protocol vulnerabilities. Moving to high-numbered, unassigned ports reduces this risk by making the service less obvious to generic scanners and avoiding conflicts.
+
+Out-of-Scope Recommendations:
+*   **Secure Transport (IPsec/TLS)**: The configuration does not specify any secure transport mechanisms (e.g., IPsec tunnels, TLS) for the F1, N2, N3, or E1 interfaces. 3GPP TS 33.501 mandates security protection for control and user plane traffic on these interfaces, typically via IPsec. Implementing IPsec is crucial for protecting the confidentiality and integrity of traffic exchanged between the gNB-CU-UP and other network functions (gNB-DU, AMF, UPF, CU-CP).
+*   **Logging Level Review**: While `info` level logging is acceptable, for production environments, it is often recommended to configure higher log levels (e.g., `warn`, `error`) for general operation to reduce log volume and focus on critical events, helping to prevent potential information leakage and simplify incident response. Detailed audit logging should be configured separately.
+*   **S-NSSAI `sd` Wildcard**: The `snssaiList` uses `sd = 0xffffff`, which represents a wildcard for the Slice Differentiator. While functionally allowed by 3GPP (TS 23.501, 4.2.2.2), using specific `sd` values instead of a wildcard can provide more granular control and enforce stricter separation of network slices, enhancing security by limiting the scope of access for a given SST.
+*   **Parameter Naming Consistency**: The parameter `GNB_PORT_FOR_S1U` refers to the GTP-U port. In a 5G context, this is typically for the NG-U (N3) interface. While the value `2152` is correct, renaming the parameter to `GNB_PORT_FOR_NGU` or `GNB_PORT_FOR_N3` would improve clarity and consistency with 5G terminology. (This is a structural change, so it's out of scope for a fix).
+
+
+=== CORRECTED CONFIGURATION ===
+Active_gNBs = ( "gNB-OAI");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+    gNB_CU_UP_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-OAI";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1, sd = 0xffffff }) });
+
+
+    tr_s_preference = "f1";
+
+    local_s_address = "192.168.72.161";
+    remote_s_address = "192.168.72.171";
+    local_s_portc   = 50001;
+    local_s_portd   = 2152;
+    remote_s_portc  = 50000;
+    remote_s_portd  = 2152;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+    E1_INTERFACE =
+    (
+      {
+        type = "up";
+        ipv4_cucp = "192.168.71.150";
+        ipv4_cuup = "192.168.71.161";
+      }
+    )
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.161/24";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.71.161/24";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+  }
+);
+
+log_config : {
+  global_log_level = "info";
+  pdcp_log_level   = "info";
+  f1ap_log_level   = "info";
+  ngap_log_level   = "info";
+};

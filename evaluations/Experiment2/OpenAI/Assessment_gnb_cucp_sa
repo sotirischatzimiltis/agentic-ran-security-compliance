@@ -1,0 +1,271 @@
+=== COMPLIANCE ASSESSMENT ===
+Detection phase – Security-relevant fields and values:
+- security.ciphering_algorithms = ( "nea0" )
+- security.integrity_algorithms = ( "nia2", "nia0" )
+- security.drb_ciphering = "yes"
+- security.drb_integrity = "no"
+
+Assessment of compliance:
+1) ciphering_algorithms = "nea0"
+   - According to 3GPP TS 38.331 and 38.300, NEA0 means "no encryption."
+   - O-RAN and 3GPP security requires user data (DRBs) to be ciphered.
+   - NEA0 is a non-secure option and should NOT be preferred.
+2) integrity_algorithms = ("nia2", "nia0")
+   - NIA0 is the null integrity algorithm. Having a null integrity algorithm as the second preference opens the risk of data integrity bypass.
+   - According to 3GPP standards, null algorithms are allowed for testing but SHOULD NOT be preferred.
+3) drb_ciphering = "yes"
+   - This enables ciphering of DRBs, compliant.
+4) drb_integrity = "no"
+   - This disables integrity protection on DRBs.
+   - According to security requirements, integrity protection must be enabled for DRBs to prevent tampering.
+   - 3GPP TS 38.331 states integrity protection is mandatory for DRBs.
+
+Violations Found:
+- Using the no-ciphering algorithm "nea0" as preferred is a serious security violation.
+- Allowing "nia0" (null integrity) as second choice is a security risk.
+- DRB integrity protection is disabled ("no") – this violates mandatory integrity protection requirements.
+
+Specification References:
+- 3GPP TS 38.331 (NR RRC) security configuration requirements.
+- 3GPP TS 38.300 (NR Overall description / security requirements).
+- O-RAN WG security guidelines reference mandatory ciphering and integrity.
+- ETSI standards on 5G security require user-plane integrity protection.
+
+Recommended Code Modifications:
+- Change ciphering_algorithms from ("nea0") → ("nea2") or any valid non-null cipher (choose nea2 to fix minimal).
+- Remove the "nia0" null integrity algorithm from integrity_algorithms list or at least do not list it as a preferred algorithm. Recommended to have ("nia2") only.
+- Change drb_integrity from "no" → "yes" to enable integrity protection on DRBs.
+
+Security Impact Analysis:
+- Null ciphering ("nea0") allows unencrypted user data, exposing data to interception.
+- Null integrity ("nia0") allows tampering and impersonation attacks.
+- Disabling DRB integrity exposes the system to Man-in-the-Middle and data manipulation risks on user data bearers.
+- Fixing these enforces confidentiality and integrity of user plane data as required.
+
+Out-of-Scope Recommendations:
+- Use of TLS/IPSec for transport protection, certificates, or mutual authentication are not represented and thus out of scope here.
+- SCTP parameters could be improved with secure configs but are not explicitly configured insecurely here.
+
+Corrected config (only changes marked with comments for clarity, no added lines):
+
+
+
+Verification phase:
+- ciphering_algorithms is now nea2 → compliant (non-null cipher).
+- integrity_algorithms only nia2 → compliant (non-null integrity).
+- drb_integrity = "yes" → compliant with mandatory integrity.
+- No other security violations present.
+
+Compliance Status: Non-Compliant (because original config had violations and was fixed)
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection phase: 
+
+Security-relevant fields and their values:
+- security.ciphering_algorithms = ("nea0")
+- security.integrity_algorithms = ("nia2", "nia0")
+- security.drb_ciphering = "yes"
+- security.drb_integrity = "no"
+- gNB_ID = 0xe00 (identification, generally okay)
+- amf_ip_address = ({ ipv4 = "oai-amf"; }) (hostname instead of IP address)
+- The use of "remote_s_address = 0.0.0.0" (indicates multiple DUs)
+- SCTP streams: SCTP_INSTREAMS = 2, SCTP_OUTSTREAMS = 2
+
+Analyzing compliance against O-RAN, 3GPP, and ETSI security standards for CU-CP:
+
+1. ciphering_algorithms = ("nea0"):
+   - According to 3GPP TS 33.501 and 38.331, nea0 means no encryption.
+   - Security risk: "nea0" is null ciphering, effectively no ciphering.
+   - For over-the-air security and especially transport layer confidentiality, the configuration must not prefer "nea0" (no encryption).
+   - Therefore, this is a security violation.
+
+2. integrity_algorithms = ("nia2", "nia0"):
+   - "nia0" means no integrity protection.
+   - The first algorithm "nia2" is a valid integrity algorithm, no violation here because the UE picks the first supported.
+   - Leaving "nia0" second is acceptable as fallback; not violation.
+
+3. drb_ciphering = "yes"
+   - Ciphering enabled for DRBs, which is good.
+
+4. drb_integrity = "no":
+   - Integrity protection disabled on DRBs, which is a known risk.
+   - According to 3GPP spec, DRB integrity protection should be enabled to protect user plane data.
+   - Violation.
+
+5. amf_ip_address = ({ ipv4 = "oai-amf"; })
+   - The "ipv4" field has a string hostname "oai-amf".
+   - The configuration is expected to have an IP address, not a hostname.
+   - Using a hostname instead of IP can cause name resolution issues or risk the use of invalid/unverified addresses.
+   - While not strictly a security violation, it is an operational risk.
+   - The spec does not forbid hostname, but minimal security best practice: keep IP addresses.
+   - Not explicitly mandated as a violation here, so we do not treat as a must-fix.
+
+6. remote_s_address = "0.0.0.0"
+   - According to the comment, it means multiple DUs.
+   - Not a security violation.
+
+7. SCTP streams count:
+   - 2 streams in/out minimal for SCTP.
+   - No violation present.
+
+Summary of detected violations:
+- ciphering_algorithms includes "nea0" first → No encryption chosen by default.
+- drb_integrity = "no" → integrity protection disabled on DRBs.
+
+Specification References:
+- 3GPP TS 33.501: Security architecture and procedures for 5G system
+- O-RAN Alliance WG4 Security document (security requirements for CU-CP)
+- ETSI 5G specs related to security and interface confidentiality/integrity.
+
+Recommended Code Modifications:
+
+1) Change ciphering_algorithms from ("nea0") to a secure ciphering algorithm, e.g., ("nea2").
+   - Smallest fix to remove null ciphering option and use standardized encryption.
+2) Change drb_integrity from "no" to "yes" to enable integrity protection on DRBs.
+
+Security Impact Analysis:
+- Removing "nea0" prevents the UE from choosing no encryption, enforcing confidentiality.
+- Enabling DRB integrity protects user plane data from tampering.
+- Both changes improve the confidentiality and integrity of user data, aligning with 3GPP and O-RAN security standards.
+
+No other fixes are required.
+
+Verification phase:
+
+- ciphering_algorithms corrected to ("nea2")
+- drb_integrity corrected to "yes"
+
+Both fixes present. No other violations remain.
+
+Compliance Status: Non-Compliant (due to violation fixes applied)
+
+
+
+Out-of-Scope Recommendations:
+- Consider replacing hostname "oai-amf" in amf_ip_address with an explicit IP address to avoid resolution issues.
+- Enable TLS/IPSec or other secure transport protocols to protect control plane signaling.
+- Review SCTP parameter security enhancements (authentication, encryption).
+
+
+Compliance Status: Non-Compliant
+
+Violations Found:
+- ciphering_algorithms set to "nea0" (no encryption) → violates 3GPP TS 33.501 requirement for encryption.
+- drb_integrity set to "no" disables integrity protection on DRBs → violates 3GPP TS 33.501.
+
+Specification References:
+- 3GPP TS 33.501 (Security architecture and procedures for 5G system)
+- O-RAN WG4 Security requirements document
+- ETSI 5G security standards
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection phase:
+
+Security relevant fields and values:
+
+1. security block:
+   - ciphering_algorithms = ("nea0")
+   - integrity_algorithms = ("nia2", "nia0")
+   - drb_ciphering = "yes"
+   - drb_integrity = "no"
+
+2. SCTP:
+   - SCTP_INSTREAMS = 2
+   - SCTP_OUTSTREAMS = 2
+
+3. local_s_address = "192.168.71.150";
+4. remote_s_address = "0.0.0.0"; # multiple DUs
+
+Other fields like IP addresses, ports, etc., are less relevant to security compliance unless explicitly tied to security standards.
+
+Assessment of each field for compliance:
+
+1. ciphering_algorithms = ("nea0"):
+   - Per O-RAN and 3GPP security standards:
+     - "nea0" means no encryption.
+     - Security standards require encryption algorithms for confidentiality.
+     - So "nea0" usage violates security requirements to use ciphering for protecting data.
+   - Violation: Using "nea0" disables ciphering.
+
+2. integrity_algorithms = ("nia2", "nia0"):
+   - "nia0" means no integrity protection, "nia2" is a valid integrity algorithm.
+   - The order implies that "nia2" is preferred, which is compliant.
+   - So integrity is configured with a valid algorithm as preferred.
+
+3. drb_ciphering = "yes":
+   - Ciphering enabled, so this protects DRB data.
+   - Compliant.
+
+4. drb_integrity = "no":
+   - Disables integrity protection on DRB.
+   - This violates 3GPP and O-RAN security standards which require integrity protection to prevent data tampering on DRB.
+   - Violation: drb_integrity set to "no".
+
+5. SCTP_INSTREAMS and SCTP_OUTSTREAMS = 2:
+   - Minimal streams may be insufficient for performance but not directly a security violation.
+   - No violation.
+
+6. remote_s_address = "0.0.0.0":
+   - Means multiple DUs, allowed.
+
+No other security violations detected.
+
+Violations found:
+
+1. ciphering_algorithms = ("nea0") violates mandatory ciphering (no encryption disables confidentiality)
+2. drb_integrity = "no" disables integrity protection on DRB
+
+Specification References:
+
+- 3GPP TS 33.501 (Security architecture and procedures for 5G systems):
+  - Ciphering of user plane data is mandatory.
+  - Integrity protection of user plane (DRB) is mandatory.
+- O-RAN WG4 Security and Transport:
+  - Requires confidentiality and integrity protection on DRBs.
+- Use of "nea0" and "nia0" for no encryption/integrity is not compliant when protecting DRBs.
+
+Recommended Code Modifications:
+
+1. Change ciphering_algorithms from ("nea0") to ("nea2") or other approved ciphering (nea2 is commonly recommended).
+   - Reason: Enable ciphering to provide confidentiality.
+
+2. Change drb_integrity from "no" to "yes"
+   - To enforce integrity protection on DRB.
+
+Security Impact Analysis:
+
+- Without ciphering, user data confidentiality is not protected, enabling passive eavesdropping.
+- Without integrity, data tampering or injection attacks can occur on DRB.
+- Enabling ciphering and integrity as recommended ensures confidentiality and integrity aligning with 3GPP and O-RAN security specs.
+
+Verification phase:
+
+Applying changes fixes all detected violations.
+
+Compliance Status: Non-Compliant
+
+Violations Found:
+- Disabling ciphering by using "nea0" in ciphering_algorithms
+- Disabling integrity for DRBs by setting drb_integrity to "no"
+
+Specification References:
+- 3GPP TS 33.501
+- O-RAN WG4 Security and Transport
+
+Recommended Code Modifications:
+- ciphering_algorithms = ( "nea2" );
+- drb_integrity = "yes";
+
+Security Impact Analysis:
+- Enabling ciphering prevents eavesdropping.
+- Enabling integrity protects against data manipulation.
+- Aligns config with mandatory security requirements.
+
+Out-of-Scope Recommendations:
+- Enable IPsec or TLS for transport protocols.
+- Use secure SCTP configuration with authentication.
+- Use valid hostnames/IP addresses for AMF.

@@ -1,0 +1,208 @@
+Assesments for Bert Score:
+=== COMPLIANCE ASSESSMENT ===
+**Compliance Status:** Non-Compliant
+
+**Violations Found:**
+1. **ciphering_algorithms = ( "nea0" );**  
+   - Violation: Selection of ciphering algorithm "nea0" which means "No encryption" (Null ciphering).  
+   - Spec Reference: 3GPP TS 33.501 and O-RAN WG4 security requirements mandate that no "no encryption" algorithm should be preferred. Encryption must be enabled using at least NEA1, NEA2, or NEA3.  
+   - Risk: Using "nea0" disables ciphering, exposing user data to interception and eavesdropping.
+
+2. **drb_integrity = "no";**  
+   - Violation: Integrity protection for Data Radio Bearers (DRB) is disabled.  
+   - Spec Reference: 3GPP TS 33.501 mandates integrity protection for DRBs to prevent undetected data tampering.  
+   - Risk: Without integrity protection, DRB data packets can be modified maliciously without detection.
+
+**Specification References:**
+- 3GPP TS 33.501: 5G Security; Security architecture and procedures for 5G system.
+- O-RAN WG4 Security Requirements (generally require UE confidentiality and integrity protection).
+
+**Recommended Code Modifications:**
+- Change `ciphering_algorithms` from `("nea0")` to `("nea2")` (NEA2 is a widely supported ciphering algorithm and stronger than NEA0).
+- Change `drb_integrity` from `"no"` to `"yes"` to enable integrity protection on DRBs.
+
+**Security Impact Analysis:**
+- Enabling a strong ciphering algorithm (nea2) ensures that user plane data is encrypted, protecting confidentiality.  
+- Enabling DRB integrity protection prevents data tampering and spoofing attacks on radio bearers, ensuring data integrity.
+
+**Out-of-Scope Recommendations:**
+- Use of TLS or IPsec/IKEv2 for interfaces.  
+- Certificate-based authentication.  
+- Using stronger algorithm preferences like nea3 or nia3 if supported.  
+- Increasing number of SCTP streams based on load.  
+- Using valid non-localhost IP addresses for `local_s_address` and `remote_s_address` if deployment requires.
+
+=== COMPLIANCE ASSESSMENT ===
+Detection phase - Security-relevant fields:
+
+- security.ciphering_algorithms = ("nea0")
+- security.integrity_algorithms = ("nia2", "nia0")
+- security.drb_ciphering = "yes"
+- security.drb_integrity = "no"
+
+Analysis of these fields for compliance:
+
+1) ciphering_algorithms = ("nea0")
+  - NEA0 means no encryption (no ciphering). According to 3GPP TS 33.401 and O-RAN security requirements, ciphering must not be disabled.
+  - Usage of "nea0" ciphering algorithm, i.e. no encryption, is a security violation.
+
+2) integrity_algorithms = ("nia2", "nia0")
+  - "nia0" means no integrity protection.
+  - Having "nia0" in the list could cause selection of no integrity protection if UE supports it.
+  - 3GPP mandates integrity protection must be applied.
+  - The presence of "nia0" is a violation; should only contain integrity algorithms with integrity protection (e.g., nia1, nia2, nia3).
+
+3) drb_ciphering = "yes"
+  - Ciphering is enabled for DRBs, which is compliant.
+
+4) drb_integrity = "no"
+  - Integrity protection disabled for DRBs is a violation.
+  - 3GPP and O-RAN security require integrity protection for DRBs.
+  - drb_integrity must be "yes".
+
+Summary of violations:
+
+- ciphering_algorithms includes "nea0", which disables ciphering → violation.
+- integrity_algorithms includes "nia0", which disables integrity → violation.
+- drb_integrity = "no" disables integrity protection on DRB → violation.
+
+Fixing phase:
+
+- ciphering_algorithms: remove "nea0" and replace with secure ciphering algorithm. According to valid values: nea1, nea2, nea3.
+  - Choose "nea2" (AES based) as a secure choice.
+- integrity_algorithms: remove "nia0", leaving only "nia2".
+- drb_integrity: change to "yes".
+
+Specifications referenced:
+
+- 3GPP TS 33.401 (Security architecture and procedures for 3GPP access networks)
+- O-RAN Security WG documents stating ciphering and integrity MUST be enabled on all user-plane radio bearers.
+
+Security impact:
+
+- Using NEA0 or NIA0 disables ciphering/integrity leading to serious security risks such as data interception, spoofing, session hijacking.
+- Disabling DRB integrity exposes data integrity manipulation attacks.
+- Fixing these restores confidentiality and integrity protections as mandated.
+
+Verification phase:
+
+After fixing, no zero-ciphering or zero-integrity algorithms remain, and DRB integrity is enabled.
+
+Compliance Status: Non-Compliant (due to initial violations, now fixed)
+
+Recommended code modifications:
+
+- ciphering_algorithms = ("nea2");
+- integrity_algorithms = ("nia2");
+- drb_integrity = "yes";
+
+No other changes are needed.
+
+Out-of-Scope Recommendations:
+
+- Recommend enabling TLS/IPsec for transport interfaces.
+- Consider stronger algorithms based on latest 3GPP recommendations.
+- Implement certificate-based authentication.
+- Harden logging configurations as per policy.
+
+Compliance Status: Non-Compliant  
+Violations Found:  
+- Use of ciphering_algorithms "nea0" (no encryption)  
+- Inclusion of integrity_algorithms "nia0" (no integrity)  
+- drb_integrity disabled ("no")  
+
+Specification References:  
+- 3GPP TS 33.401 Security Architecture  
+- O-RAN WG4 Security Requirements  
+
+Recommended Code Modifications:  
+- Change ciphering_algorithms to remove "nea0" and use secure algorithm (e.g., "nea2")  
+- Remove "nia0" from integrity_algorithms list  
+- Set drb_integrity to "yes"  
+
+Security Impact Analysis:  
+- Enabling ciphering and integrity ensures confidentiality and integrity of user data, preventing eavesdropping, tampering, and replay attacks on user plane traffic.  
+- Disabling these leaves the radio interface vulnerable to multiple security threats.  
+
+Out-of-Scope Recommendations:  
+- Use secured transport layers (TLS/IPsec) for NG/API interfaces.  
+- Introduce certificate-based mutual authentication.  
+- Regularly update cipher and integrity algorithm preferences according to latest standard recommendations.
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection phase - Security relevant fields and values:
+- ciphering_algorithms = ( "nea0" )
+- integrity_algorithms = ( "nia2", "nia0" )
+- drb_ciphering = "yes"
+- drb_integrity = "no"
+
+Evaluation of compliance:
+- ciphering_algorithms = ( "nea0" ):
+  NEA0 means no encryption (NULL cipher) as per 3GPP TS 33.401 and TS 33.501.
+  Using NEA0 is a security violation because it disables ciphering.
+- integrity_algorithms = ( "nia2", "nia0" ):
+  NIA0 means no integrity protection (NULL integrity).
+  Having "nia0" (no integrity) as a candidate algorithm is a risk.
+  While "nia2" (a valid secured integrity algorithm) is first, presence of "nia0" weakens security if chosen.
+  Per security standards, NULL integrity should not be preferred or offered.
+- drb_integrity = "no":
+  Integrity protection at DRB level is disabled, which violates 3GPP security requirements for integrity protection over the user data plane.
+- drb_ciphering = "yes":
+  This is ok, ciphering enabled for DRBs.
+
+Summary of violations:
+1. Use of NEA0 ciphering algorithm (NULL cipher) in ciphering_algorithms.
+2. Inclusion of NIA0 integrity algorithm (NULL integrity) in integrity_algorithms.
+3. DRB integrity protection disabled (drb_integrity = "no").
+
+Specification references:
+- 3GPP TS 33.501: Security architecture and procedures for 5G system.
+- 3GPP TS 38.331 and TS 38.423 for RRC/F1AP security.
+- O-RAN Security recommendations that require mandatory integrity and ciphering for user plane data.
+
+Security impact:
+- Allowing NULL cipher disables encryption, exposing user and signaling data to interception.
+- Allowing NULL integrity weakens integrity protection, allows undetected data modification.
+- Disabling DRB integrity means data radio bearers have no integrity, risking data tampering.
+
+Recommended code modifications:
+- Remove "nea0" from ciphering_algorithms. Since only "nea0" is present, replace with a compliant algorithm such as "nea2" (AES), which is a standard secure cipher.
+- Remove "nia0" from integrity_algorithms, leaving only "nia2".
+- Change drb_integrity = "no" to drb_integrity = "yes".
+
+No other fields need changes. Changes are minimal and within existing structure.
+
+Verification phase:
+After fixes:
+- ciphering_algorithms = ("nea2")
+- integrity_algorithms = ("nia2")
+- drb_integrity = "yes"
+
+All compliance issues addressed.
+
+Compliance Status: Non-Compliant
+
+Violations Found:
+1) Use of NEA0 (NULL cipher) in ciphering_algorithms.
+2) Inclusion of NIA0 (NULL integrity) in integrity_algorithms.
+3) drb_integrity disabled ("no").
+
+Specification References:
+- 3GPP TS 33.501 - Security architecture and procedures.
+- 3GPP TS 38.423 - F1 Application Protocol.
+- O-RAN Security recommendations on mandatory ciphering and integrity protection.
+
+Recommended Code Modifications:
+- Change ciphering_algorithms = ("nea2")
+- Change integrity_algorithms = ("nia2")
+- Change drb_integrity = "yes"
+
+Security Impact Analysis:
+The original configuration allowed no encryption and disabled integrity for user data radio bearers, exposing the system to eavesdropping and data manipulation risks. The corrected config enforces standard strong ciphering and integrity protection, protecting confidentiality, and data integrity.
+
+Out-of-Scope Recommendations:
+- Enable TLS/IPsec on transport links if supported.
+- Use secure keys management and certificate-based authentication.
+

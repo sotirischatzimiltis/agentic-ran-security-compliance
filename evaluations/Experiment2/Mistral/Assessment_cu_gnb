@@ -1,0 +1,182 @@
+=== COMPLIANCE ASSESSMENT ===
+### **Compliance Assessment Report**
+
+#### **Compliance Status**: **Non-Compliant**
+
+### **Violations Found**
+
+| **Parameter**               | **Current Value**                     | **Violation**                                                                 | **Specification Reference**                                                                 |
+|-----------------------------|---------------------------------------|-------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| `ciphering_algorithms`      | `("nea0")`                            | **nea0 (NULL ciphering) is prohibited in O-RAN and 3GPP for user data.**      | O-RAN.WG4.Security-Requirements-v07.00 §6.2.2; 3GPP TS 33.501 §6.4.3, §A.7                  |
+| `integrity_algorithms`      | `("nia2", "nia0")`                    | **nia0 (NULL integrity) is prohibited in O-RAN and 3GPP for user data.**      | O-RAN.WG4.Security-Requirements-v07.00 §6.2.2; 3GPP TS 33.501 §6.4.4, §A.9                  |
+| `drb_integrity`             | `"no"`                                | **DRB integrity protection must be enabled per O-RAN and 3GPP.**              | O-RAN.WG4.Security-Requirements-v07.00 §6.2.2; 3GPP TS 33.501 §6.4.4, §A.9                  |
+
+### **Specification References**
+
+1. **O-RAN.WG4.Security-Requirements-v07.00 §6.2.2**:
+   - Prohibits the use of NULL ciphering (nea0) and NULL integrity (nia0) for user plane and control plane security.
+   - Mandates integrity protection for DRBs (Data Radio Bearers).
+
+2. **3GPP TS 33.501 §6.4.3 (Ciphering Algorithms)**:
+   - **nea0** (NULL ciphering) **shall not be used** for user data protection.
+
+3. **3GPP TS 33.501 §6.4.4 (Integrity Algorithms)**:
+   - **nia0** (NULL integrity) **shall not be used** for user data protection.
+   - **Integrity protection for DRBs is mandatory** unless explicitly exempted (e.g., for specific QoS flows).
+
+4. **3GPP TS 33.501 §A.7 and §A.9**:
+   - Confirms that **nea0** and **nia0** are **not allowed** for DRBs or SRBs in operational networks.
+
+### **Recommended Code Modifications**
+
+#### **1. Remove `nea0` from `ciphering_algorithms`**
+- **Risk**: Using NULL ciphering (`nea0`) exposes user plane data to eavesdropping and tampering.
+- **Fix**: Remove `"nea0"` from the list. Replace with a secure algorithm (e.g., `"nea2"`).
+
+#### **2. Remove `nia0` from `integrity_algorithms`**
+- **Risk**: Using NULL integrity (`nia0`) allows undetected tampering of user plane data.
+- **Fix**: Remove `"nia0"` from the list. Keep only secure algorithms (e.g., `"nia2"`).
+
+#### **3. Enable DRB Integrity Protection**
+- **Risk**: Disabling DRB integrity (`drb_integrity = "no"`) violates O-RAN and 3GPP security mandates.
+- **Fix**: Set `drb_integrity = "yes"`.
+
+### **Security Impact Analysis**
+
+| **Violation**               | **Security Impact**                                                                 |
+|-----------------------------|------------------------------------------------------------------------------------|
+| **NULL Ciphering (nea0)**   | User plane data is transmitted in cleartext, enabling eavesdropping and tampering. |
+| **NULL Integrity (nia0)**   | User plane data can be modified without detection, leading to data corruption.     |
+| **Disabled DRB Integrity**  | Violates O-RAN and 3GPP mandates; exposes DRBs to undetected tampering.            |
+
+### **Out-of-Scope Recommendations**
+- **TLS/IPsec**: Enable TLS for F1-C and IPsec for F1-U interfaces (O-RAN.WG4.Security-Requirements-v07.00 §6.2.3).
+- **Certificate Management**: Deploy X.509 certificates for mutual authentication (3GPP TS 33.310).
+- **IKEv2**: Use IKEv2 for IPsec SA establishment (3GPP TS 33.210).
+- **Logging**: Restrict debug-level logging in production to avoid information leakage.
+
+
+
+=== COMPLIANCE ASSESSMENT ===
+### **Compliance Assessment Report**
+
+#### **Compliance Status**: **Non-Compliant**
+
+### **Violations Found**
+
+| **Parameter**               | **Current Value**                     | **Compliance Issue**                                                                 | **Specification Reference**                                                                 |
+|----------------------------|---------------------------------------|--------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
+| `ciphering_algorithms`     | `("nea0")`                            | `nea0` is NULL ciphering (no encryption). **Prohibited** for user plane and control plane in 5G. | **3GPP TS 33.501 v17.6.0, Section 6.4.4**: NULL ciphering (NEA0) **must not** be used for security-critical communications. |
+| `integrity_algorithms`     | `("nia2", "nia0")`                    | `nia0` is NULL integrity (no integrity protection). **Prohibited** for DRBs and SRBs. | **3GPP TS 33.501 v17.6.0, Section 6.4.4**: NULL integrity (NIA0) **must not** be used for any DRB or SRB. |
+| `drb_integrity`            | `"no"`                                | Disabling integrity protection for DRBs violates **mandatory** integrity protection. | **3GPP TS 33.501 v17.6.0, Section 6.5.2**: Integrity protection **must** be enabled for all DRBs. |
+
+### **Specification References**
+- **3GPP TS 33.501 v17.6.0 (Security architecture and procedures for 5G System)**:
+  - **Section 6.4.4**: Ciphering and integrity algorithms.
+  - **Section 6.5.2**: Mandatory integrity protection for DRBs.
+- **O-RAN.WG4.Security Requirements v7.0**:
+  - **Section 6.2.2**: Prohibits NULL ciphering (NEA0) and NULL integrity (NIA0) in O-RAN-compliant deployments.
+
+### **Recommended Code Modifications**
+
+#### **1. `ciphering_algorithms`**
+- **Current**: `("nea0")`
+- **Fix**: Remove `nea0` and replace with **NEA1 (128-bit SNOW), NEA2 (128-bit AES-CTR), or NEA3 (128-bit ZUC)**.
+- **Applied Fix**: `("nea2", "nea1", "nea3")` (order reflects preference; NEA2 is AES-CTR, widely supported).
+
+#### **2. `integrity_algorithms`**
+- **Current**: `("nia2", "nia0")`
+- **Fix**: Remove `nia0` and ensure **NIA1 (128-bit SNOW), NIA2 (128-bit AES-CMAC), or NIA3 (128-bit ZUC)** are used.
+- **Applied Fix**: `("nia2", "nia1", "nia3")` (NIA2 is AES-CMAC, widely supported).
+
+#### **3. `drb_integrity`**
+- **Current**: `"no"`
+- **Fix**: Set to `"yes"` to comply with **mandatory DRB integrity protection**.
+
+### **Security Impact Analysis**
+
+| **Violation**               | **Security Risk**                                                                 |
+|----------------------------|-----------------------------------------------------------------------------------|
+| **NULL Ciphering (NEA0)**  | **No encryption** → Eavesdropping, MITM attacks, data leakage. Critical for user/control plane. |
+| **NULL Integrity (NIA0)**  | **No integrity protection** → Data tampering, spoofing, replay attacks. Critical for DRBs/SRBs. |
+| **DRB Integrity Disabled** | **No integrity for DRBs** → Tampering with user data (e.g., VoNR, URLLC). Violates 3GPP 5G security baseline. |
+
+### **Out-of-Scope Recommendations**
+- **TLS/IPsec for F1-C/U**: Enable TLS or IPsec for F1-C and F1-U interfaces (O-RAN.WG4.Security v7.0, Section 6.3).
+- **Certificate-Based Authentication**: Deploy X.509 certificates for gNB authentication (3GPP TS 33.310).
+- **IKEv2 for IPsec**: Use IKEv2 for dynamic key management (3GPP TS 33.210).
+
+### **Corrected Configuration**
+
+### **Verification**
+- **NULL Ciphering (NEA0)**: Removed from `ciphering_algorithms`.
+- **NULL Integrity (NIA0)**: Removed from `integrity_algorithms`.
+- **DRB Integrity**: Enabled (`"yes"`).
+- **No new parameters added**; minimal changes applied.
+
+
+=== COMPLIANCE ASSESSMENT ===
+### **Compliance Assessment Report**
+
+#### **Compliance Status**: **Non-Compliant**
+
+### **Violations Found**
+
+1. **Weak Ciphering Algorithm (`nea0`)**
+   - **Field**: `ciphering_algorithms = ( "nea0" );`
+   - **Issue**: `nea0` is the NULL ciphering algorithm, which provides no encryption and is **prohibited** in secure deployments per **3GPP TS 33.501 (Security Architecture and Procedures for 5G System)** and **O-RAN.WG4.Security Requirements (O-RAN Security Protocols Specification v7.0)**.
+   - **Risk**: Enables eavesdropping and data tampering on the air interface (Uu).
+   - **Fix Required**: Remove `nea0` from the list. The first algorithm in the list is used if supported by the UE, so `nea0` must not be present.
+
+2. **Weak Integrity Algorithm (`nia0`)**
+   - **Field**: `integrity_algorithms = ( "nia2", "nia0" );`
+   - **Issue**: `nia0` is the NULL integrity algorithm, which provides no integrity protection and is **prohibited** in secure deployments per **3GPP TS 33.501** and **O-RAN.WG4.Security**.
+   - **Risk**: Enables message tampering and replay attacks on the air interface (Uu).
+   - **Fix Required**: Remove `nia0` from the list.
+
+3. **Disabled DRB Integrity (`drb_integrity = "no"`)**
+   - **Field**: `drb_integrity = "no";`
+   - **Issue**: Disabling integrity protection for Data Radio Bearers (DRBs) violates **3GPP TS 33.501 (Section 6.2.2)**, which mandates integrity protection for all DRBs in 5G.
+   - **Risk**: Enables data tampering and injection attacks on user plane traffic.
+   - **Fix Required**: Set `drb_integrity = "yes";`.
+
+### **Specification References**
+- **3GPP TS 33.501 (v17.6.0)**: Security architecture and procedures for 5G System.
+  - **Section 5.2.3**: Mandates use of strong ciphering (NEA1/2/3) and integrity (NIA1/2/3) algorithms.
+  - **Section 6.2.2**: Mandates integrity protection for all DRBs.
+- **O-RAN.WG4.Security (v7.0)**: Security Protocols Specification.
+  - **Section 6.2**: Prohibits use of NULL ciphering (`nea0`) and NULL integrity (`nia0`).
+- **ETSI TS 133 501 (v17.6.0)**: Aligns with 3GPP TS 33.501 on security requirements.
+
+### **Recommended Code Modifications**
+
+1. **Remove `nea0` from `ciphering_algorithms`**:
+   ```diff
+   - ciphering_algorithms = ( "nea0" );
+   + ciphering_algorithms = ();
+   ```
+   *(Note: If no algorithms are specified, the stack may default to a secure algorithm. However, the configuration **must not explicitly allow `nea0`**.)*
+
+2. **Remove `nia0` from `integrity_algorithms`**:
+   ```diff
+   - integrity_algorithms = ( "nia2", "nia0" );
+   + integrity_algorithms = ( "nia2" );
+   ```
+
+3. **Enable DRB Integrity**:
+   ```diff
+   - drb_integrity = "no";
+   + drb_integrity = "yes";
+   ```
+
+### **Security Impact Analysis**
+- **Ciphering (`nea0`)**: Leaves user plane and control plane traffic **unencrypted**, enabling eavesdropping and session hijacking.
+- **Integrity (`nia0`)**: Leaves messages **unprotected against tampering**, enabling injection of malicious control plane messages (e.g., fake RRC reconfigurations).
+- **DRB Integrity (`drb_integrity = "no"`)**: Allows attackers to **modify or inject user plane traffic** (e.g., IP packets), violating confidentiality and integrity.
+
+### **Out-of-Scope Recommendations**
+*(Do not affect compliance status)*
+1. **TLS/IPsec for F1-C and NG Interfaces**: While not present in the config, enabling TLS/IPsec for F1-C (CU-DU) and NG (CU-AMF) interfaces is **strongly recommended** per **O-RAN.WG4.Security** and **3GPP TS 33.501**.
+2. **Certificate-Based Authentication**: Deploy X.509 certificates for mutual authentication between CU, DU, and AMF.
+3. **Log Sanitization**: Ensure logs (e.g., `debug` level for RLC/F1AP/NGAP) do not expose sensitive information (e.g., keys, IMSIs).
+

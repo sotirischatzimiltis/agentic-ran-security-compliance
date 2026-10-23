@@ -1,0 +1,221 @@
+Filename: gnb-cuup.sa.f1.conf
+Revision iteration: 1
+
+=== REFLECTION OUTPUT (JSON) ===
+{
+  "OverallAssessment": "The assessment correctly identified the invalid SCTP control ports 500 and 501 as violations and recommended minimal, precise changes to fix only those ports. The corrected config respects the minimal-change rule by only altering the local_s_portc and remote_s_portc values to a valid SCTP port 36412. No other parameters were changed or reordered. The violation is backed by accurate citations and sound security impact rationale. No missed violations or scope errors are present.",
+  "Issues": [],
+  "MustFixSummary": [
+    "Change SCTP control ports local_s_portc and remote_s_portc from 501 and 500 respectively to valid SCTP ports >= 1024, such as 36412."
+  ]
+}
+
+=== ORIGINAL CONFIGURATION ===
+Active_gNBs = ( "gNB-OAI");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+    gNB_CU_UP_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-OAI";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1, sd = 0xffffff }) });
+
+
+    tr_s_preference = "f1";
+
+    local_s_address = "192.168.72.161";
+    remote_s_address = "192.168.72.171";
+    local_s_portc   = 501;
+    local_s_portd   = 2153;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2153;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+    E1_INTERFACE =
+    (
+      {
+        type = "up";
+        ipv4_cucp = "192.168.71.150";
+        ipv4_cuup = "192.168.71.161";
+      }
+    )
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.161/24";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.71.161/24";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+  }
+);
+
+log_config : {
+  global_log_level = "info";
+  pdcp_log_level   = "info";
+  f1ap_log_level   = "info";
+  ngap_log_level   = "info";
+};
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection Phase - Security-relevant fields and their values:
+
+1. tracking_area_code = 1
+2. plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1, sd = 0xffffff }) })
+3. local_s_address = "192.168.72.161"
+4. remote_s_address = "192.168.72.171"
+5. local_s_portc = 501
+6. local_s_portd = 2153
+7. remote_s_portc = 500
+8. remote_s_portd = 2153
+9. SCTP_INSTREAMS = 2
+10. SCTP_OUTSTREAMS = 2
+11. NETWORK_INTERFACES:
+    - GNB_IPV4_ADDRESS_FOR_NG_AMF = "192.168.71.161/24"
+    - GNB_IPV4_ADDRESS_FOR_NGU = "192.168.71.161/24"
+    - GNB_PORT_FOR_S1U = 2152
+
+Verification of each parameter from the Knowledge Base and standards:
+
+1. tracking_area_code = 1
+   - Specification states 0x0000 and 0xfffe are reserved; 1 is allowed.
+   - Compliant.
+
+2. PLMN:
+   - MCC = 208 (France) and MNC = 99 with length 2 is valid per 3GPP.
+   - SST = 1 (must be 0-255) - valid.
+   - SD = 0xffffff is max 24-bit field, format is valid.
+   - Compliant.
+
+3. local_s_address and remote_s_address: Both are IP addresses, private range addresses assigned; no violation on IP ranges from knowledge base.
+   - Compliant.
+
+4. Ports:
+   - local_s_portc (501) and remote_s_portc (500) for control.
+   - local_s_portd and remote_s_portd (2153) for data.
+   - Checking standard ports for F1 interface:
+     - F1-C signaling generally uses SCTP ports in range 1024 or above; ports 500 and 501 are typically IPsec or IKEv2 ports—not for SCTP F1 control signaling.
+     - Port 2153 is used often for GTP-U or related, but F1-U usually uses port 2152.
+     - Review ports assignments for F1 interface with SCTP.
+   - GNB_PORT_FOR_S1U = 2152 is according to spec (GTP-U port).
+   - The control ports (501 and 500) are suspicious for F1-C SCTP, as these ports conflict or are unusual.
+   - Knowledge base confirms that SCTP for F1-C typically uses dynamic ports higher than 1024 or assigned registered ports.
+   - Violation: Ports 500 and 501 for SCTP control ports are not valid for F1-C interface per 3GPP/ETSI.
+
+5. SCTP_INSTREAMS = 2 and SCTP_OUTSTREAMS = 2
+   - Knowledge confirms SCTP must support multiple streams; typical minimum is 2 streams.
+   - Compliant.
+
+Summary of Violations Found:
+- The usage of SCTP control ports 500 and 501 violates typical port assignments for F1-C SCTP control signaling (usually >= 1024 or registered ports).
+
+Specification References:
+- 3GPP TS 38.472, ETSI TS 138.472 regarding SCTP transport for F1-C.
+- Port assignments: Typically SCTP control ports should be registered and not use reserved ports like 500, 501 (IKE Port, IPSec).
+- Tracking Area Code restrictions from configuration comment are adhered.
+- PLMN and SNSSAI fields values follow 3GPP TS 23.501.
+
+Recommended Code Modifications:
+- Change:
+  local_s_portc = 501;
+  remote_s_portc = 500;
+- To typical valid SCTP control ports such as 36412 or any valid registered SCTP port >= 1024.
+
+Minimal change: update only local_s_portc and remote_s_portc to valid ports, e.g., 36412 as per commonly used SCTP ports for F1 control.
+
+Security Impact Analysis:
+- Using invalid or non-registered ports on SCTP control channels can lead to conflicts with other protocols (IPSec/IKE), cause communication failures, or open the system to denial of service or traffic interception.
+- Ensuring correct SCTP port assignment protects against interception and operational conflicts.
+
+Out-of-Scope Recommendations:
+- Enable TLS/IPsec for SCTP links for confidentiality and integrity.
+- Enable ciphering and integrity protection for F1 interface messages.
+- Use IPv6 support as recommended by standards.
+
+Compliance Status: Non-Compliant  
+Violations Found: SCTP control ports 500 and 501 used for F1-C interface are invalid.  
+Specification References: 3GPP TS 38.472, ETSI TS 138.472, 3GPP TS 23.501  
+Recommended Code Modifications: Change local_s_portc and remote_s_portc to 36412 or another valid SCTP port >= 1024.  
+Security Impact Analysis: Using reserved system ports for SCTP can cause conflicts and security risks; proper ports prevent interception and ensure stability.  
+Out-of-Scope Recommendations: Enable secure transports (TLS, IPsec), ciphering, and integrity protections; consider IPv6 support.
+
+
+=== CORRECTED CONFIGURATION ===
+Active_gNBs = ( "gNB-OAI");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+    gNB_CU_UP_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-OAI";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1, sd = 0xffffff }) });
+
+
+    tr_s_preference = "f1";
+
+    local_s_address = "192.168.72.161";
+    remote_s_address = "192.168.72.171";
+    local_s_portc   = 36412;
+    local_s_portd   = 2153;
+    remote_s_portc  = 36412;
+    remote_s_portd  = 2153;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+    E1_INTERFACE =
+    (
+      {
+        type = "up";
+        ipv4_cucp = "192.168.71.150";
+        ipv4_cuup = "192.168.71.161";
+      }
+    )
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.161/24";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.71.161/24";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+  }
+);
+
+log_config : {
+  global_log_level = "info";
+  pdcp_log_level   = "info";
+  f1ap_log_level   = "info";
+  ngap_log_level   = "info";
+};

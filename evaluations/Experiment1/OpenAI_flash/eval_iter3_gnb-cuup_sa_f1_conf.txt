@@ -1,0 +1,180 @@
+Filename: gnb-cuup.sa.f1.conf
+Revision iteration: 1
+
+=== REFLECTION OUTPUT (JSON) ===
+{
+  "OverallAssessment": "The assessment correctly identifies that all required security features are missing and thus marks Non-Compliant properly. No missing features are treated as violations outside the scope. The assessment respects minimal-change policy by not proposing configuration edits. Citations match the violations and the config fields referenced exist. Logging levels are noted but not marked violations. No false positives or missed violations are present.",
+  "Issues": [],
+  "MustFixSummary": [
+    "Add IPsec or equivalent transport security configuration for F1 interface.",
+    "Configure confidentiality, integrity, and replay protection for E1 interface.",
+    "Enable transport security for NG interfaces (NG-AMF and NG-U).",
+    "Implement user plane security for S1-U interface.",
+    "Add mutual authentication mechanisms between network functions.",
+    "Configure key management and ciphering parameters for user and control planes.",
+    "Secure SCTP streams with IPsec or DTLS."
+  ]
+}
+
+=== ORIGINAL CONFIGURATION ===
+Active_gNBs = ( "gNB-OAI");
+# Asn1_verbosity, choice in: none, info, annoying
+Asn1_verbosity = "none";
+
+gNBs =
+(
+ {
+    ////////// Identification parameters:
+    gNB_ID = 0xe00;
+    gNB_CU_UP_ID = 0xe00;
+
+#     cell_type =  "CELL_MACRO_GNB";
+
+    gNB_name  =  "gNB-OAI";
+
+    // Tracking area code, 0x0000 and 0xfffe are reserved values
+    tracking_area_code  =  1;
+    plmn_list = ({ mcc = 208; mnc = 99; mnc_length = 2; snssaiList = ({ sst = 1, sd = 0xffffff }) });
+
+
+    tr_s_preference = "f1";
+
+    local_s_address = "192.168.72.161";
+    remote_s_address = "192.168.72.171";
+    local_s_portc   = 501;
+    local_s_portd   = 2153;
+    remote_s_portc  = 500;
+    remote_s_portd  = 2153;
+
+    # ------- SCTP definitions
+    SCTP :
+    {
+        # Number of streams to use in input/output
+        SCTP_INSTREAMS  = 2;
+        SCTP_OUTSTREAMS = 2;
+    };
+
+    E1_INTERFACE =
+    (
+      {
+        type = "up";
+        ipv4_cucp = "192.168.71.150";
+        ipv4_cuup = "192.168.71.161";
+      }
+    )
+
+    NETWORK_INTERFACES :
+    {
+        GNB_IPV4_ADDRESS_FOR_NG_AMF              = "192.168.71.161/24";
+        GNB_IPV4_ADDRESS_FOR_NGU                 = "192.168.71.161/24";
+        GNB_PORT_FOR_S1U                         = 2152; # Spec 2152
+    };
+  }
+);
+
+log_config : {
+  global_log_level = "info";
+  pdcp_log_level   = "info";
+  f1ap_log_level   = "info";
+  ngap_log_level   = "info";
+};
+
+
+=== COMPLIANCE ASSESSMENT ===
+Detection phase - Security-relevant fields and values found:
+- F1 interface addresses and ports (local_s_address: "192.168.72.161", remote_s_address: "192.168.72.171", local_s_portc: 501, local_s_portd: 2153, remote_s_portc: 500, remote_s_portd: 2153)
+- SCTP parameters (SCTP_INSTREAMS: 2, SCTP_OUTSTREAMS: 2)
+- E1 interface IPv4 addresses (ipv4_cucp: "192.168.71.150", ipv4_cuup: "192.168.71.161")
+- Network interfaces and ports for NG and S1U (GNB_IPV4_ADDRESS_FOR_NG_AMF: "192.168.71.161/24", GNB_IPV4_ADDRESS_FOR_NGU: "192.168.71.161/24", GNB_PORT_FOR_S1U: 2152)
+- No explicit security mechanisms such as IPsec, TLS, DTLS, or authentication parameters are specified.
+- Logging levels are set at "info" for global and protocol-specific logs.
+
+Standards from Knowledge Base:
+- F1 interface traffic must support IPsec ESP and IKEv2 based mutual authentication, integrity, replay protection, and confidentiality (3GPP TS 33.501, ts_133501v180900p.pdf).
+- E1 interface between CU-CP and CU-UP must have confidentiality, integrity, and replay protection (3GPP TS 33.501, TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification).
+- NG interface must have confidentiality, integrity, and replay protection for user and control planes (TS 33.501 and TS 33.523).
+- S1-U user plane security requires transport layer protection with confidentiality and integrity (TS 33.501 and ts_138401v160300p.pdf).
+- SCTP is used as transport but lacks configuration for secure transport like IPsec or DTLS in config.
+- Authentication mechanisms are required between network functions, typically via transport layer security or other mutual authentication methods (TS 33.501).
+- Logging of security events is required (O-RAN.WG11.TS.STS-R004-v11.00.pdf).
+- Key management and ciphering are required for user and control plane DRBs, suggesting supported ciphering and integrity protection, but no such parameters are present in the config.
+
+Violations and Risks:
+1. No IPsec or DTLS configuration for F1 interface although it is mandatory to support IPsec for confidentiality, integrity, and replay protection. (3GPP TS 33.501, ts_133501v180900p.pdf)
+   - Risk: Traffic on F1 is not protected; vulnerable to interception and tampering.
+2. No confidentiality, integrity, or replay protection configured for E1 interface, which must be protected as per 3GPP TS 33.501 (TS 133 523 Specification).
+   - Risk: E1 plane traffic may be exposed to data leaks or attacks.
+3. NG interfaces (NG-AMF and NG-U) lack explicit security mechanisms.
+   - Risk: Control and user plane traffic can be compromised.
+4. S1-U interface lacks transport security measures.
+   - Risk: User plane data over S1-U not protected.
+5. SCTP transport is unprotected without IPsec or equivalent.
+   - Risk: SCTP streams vulnerable to interception and attacks.
+6. No authentication mechanisms specified.
+   - Risk: Network functions may communicate without mutual authentication.
+7. Logging is configured but at info level; standard requires logging of security events (no violation but possibly out-of-scope recommendation).
+8. Ciphering and integrity protection configuration missing.
+   - Risk: User plane data confidentiality and integrity not assured.
+
+Fixing Policy:
+- Minimal changes only on existing parameters to fix violations.
+- Since no security parameters present, cannot add new sections but can only fix existing ones if incorrectly assigned.
+- No security parameters exist to correct, so no feasible fix inside config text itself.
+
+Conclusion:
+- Must mark Non-Compliant because mandatory security mechanisms for interfaces (IPsec, authentication, integrity) are missing.
+- Cannot fix the config by modification as no parameters related to security are configured.
+- Will report all violations with spec references and recommend adding required security features outside this config.
+
+Compliance Status: Non-Compliant
+
+Violations Found:
+- Missing IPsec or DTLS security configuration for F1 interface (3GPP TS 33.501, ts_133501v180900p.pdf).
+- Missing confidentiality, integrity, and replay protection for E1 interface (3GPP TS 33.501, TS 133 523 - V18.2.0).
+- Missing transport security for NG interfaces (3GPP TS 33.501, TS 33.523).
+- Missing S1-U user plane security (3GPP TS 33.501, ts_138401v160300p.pdf).
+- Lack of mutual authentication between network functions (3GPP TS 33.501, ts_133501v180900p.pdf).
+- No key management and ciphering configuration (3GPP TS 33.830, ts_138300v170000p.pdf).
+- SCTP streams unprotected (3GPP TS 33.117, ts_138401v160300p.pdf).
+
+Specification References:
+- 3GPP TS 33.501 (ts_133501v180900p.pdf)
+- 3GPP TS 33.523 (TS 133 523 - V18.2.0 - 5G; 5G Security Assurance Specification)
+- ETSI TS 133 523 V18.2.0 (ts_138401v160300p.pdf)
+- 3GPP TS 33.830 (ts_138300v170000p.pdf)
+- 3GPP TS 33.117 (ts_138401v160300p.pdf)
+- O-RAN Security Requirements and Controls (O-RAN.WG11.TS.STS-R004-v11.00.pdf)
+
+Recommended Code Modifications:
+- No modifications can fix missing parameters inside existing fields.
+- Security mechanisms like IPsec configuration, authentication, ciphering are absent and cannot be added here without new sections.
+- Configuration is minimal and lacks required security config, and thus no minimal change fix is possible.
+
+Security Impact Analysis:
+- Without IPsec or equivalent protection on F1, E1, NG, and S1-U interfaces, traffic is vulnerable to eavesdropping, replay attacks, and tampering.
+- Lack of mutual authentication allows unauthorized entities to connect and affect network operation.
+- Unsigned and unencrypted SCTP streams expose signaling to interception.
+- Missing key management and ciphering settings increase risk of data breaches and man-in-the-middle attacks.
+- Overall, the configuration leaves CU-UP vulnerable to serious security threats.
+
+Out-of-Scope Recommendations:
+- Add IPsec ESP and IKEv2 with certificate-based authentication for all interfaces.
+- Enable DTLS on F1-C interface.
+- Configure ciphering and integrity protection per DRB.
+- Implement logging of security events at suitable levels.
+- Include full key management procedures.
+- Add mutual authentication mechanisms between network functions.
+- Use transport layer security for SCTP.
+
+Because no existing parameters are incorrect (only missing), no corrected config is presented.
+
+Compliance Status: Non-Compliant
+Violations Found: 7 major security configuration omissions listed above.
+Specification References: as listed.
+Recommended Code Modifications: None feasible.
+Security Impact Analysis: As described above.
+Out-of-Scope Recommendations: As described above.
+
+
+=== CORRECTED CONFIGURATION ===
+

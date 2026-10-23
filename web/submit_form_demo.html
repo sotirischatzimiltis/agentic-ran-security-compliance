@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NF Security Compliance Assessment</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 14px;
+      padding: 40px 48px;
+      width: 100%;
+      max-width: 640px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+
+    .shield-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #238636, #2ea043);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #f0f6fc;
+      line-height: 1.3;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #8b949e;
+      margin-bottom: 32px;
+      margin-top: 6px;
+      padding-left: 56px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #30363d;
+      margin-bottom: 28px;
+    }
+
+    .form-group { margin-bottom: 22px; }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #c9d1d9;
+      margin-bottom: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    .required-badge {
+      display: inline-block;
+      background: #3d1f1f;
+      color: #f85149;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 20px;
+      margin-left: 8px;
+      vertical-align: middle;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e6edf3;
+      font-size: 0.95rem;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b949e' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #388bfd;
+      box-shadow: 0 0 0 3px rgba(56,139,253,0.15);
+    }
+
+    .file-upload-wrapper {
+      position: relative;
+      border: 2px dashed #30363d;
+      border-radius: 8px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .file-upload-wrapper:hover {
+      border-color: #388bfd;
+      background: rgba(56,139,253,0.04);
+    }
+
+    .file-upload-wrapper input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .file-upload-icon { font-size: 28px; margin-bottom: 8px; }
+
+    .file-upload-text {
+      font-size: 0.85rem;
+      color: #8b949e;
+    }
+
+    .file-upload-text span {
+      color: #388bfd;
+      font-weight: 600;
+    }
+
+    #fileName {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: #3fb950;
+      font-weight: 500;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .section-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8b949e;
+      margin-bottom: 18px;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #30363d;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 13px;
+      margin-top: 10px;
+      background: linear-gradient(135deg, #238636, #2ea043);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    button[type="submit"]:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    button[type="submit"]:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    button[type="submit"]:active:not(:disabled) { transform: translateY(0); }
+
+    #status {
+      margin-top: 16px;
+      font-size: 0.85rem;
+      text-align: center;
+      color: #8b949e;
+      min-height: 20px;
+    }
+
+    .progress-bar-wrapper {
+      margin-top: 16px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 20px;
+      height: 6px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #238636, #58a6ff);
+      border-radius: 20px;
+      animation: progress-fill 90s linear forwards;
+    }
+
+    @keyframes progress-fill { to { width: 95%; } }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #30363d;
+      border-top-color: #3fb950;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="header">
+      <div class="shield-icon">🛡️</div>
+      <h1>Network Function Security<br>Compliance Assessment</h1>
+    </div>
+    <p class="subtitle">Upload configuration files or source code for O-RAN/3GPP compliance analysis</p>
+    <hr class="divider"/>
+
+    <form id="assessmentForm" enctype="multipart/form-data">
+
+      <div class="section-label">File Details</div>
+
+      <div class="row">
+        <div class="form-group">
+          <label for="fileType">File Type <span class="required-badge">Required</span></label>
+          <select id="fileType" name="File Type" required>
+            <option value="">Select type</option>
+            <option value="Configuration">Configuration</option>
+            <option value="Source Code">Source Code</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="nfType">Network Function <span class="required-badge">Required</span></label>
+          <select id="nfType" name="Network Function Type/ Application" required>
+            <option value="">Select NF</option>
+            <option value="RU">RU</option>
+            <option value="DU">DU</option>
+            <option value="gNB(CU)">gNB(CU)</option>
+            <option value="gNB(CU-UP)">gNB(CU-UP)</option>
+            <option value="gbn(CU-CP)">gbn(CU-CP)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>File Upload <span class="required-badge">Required</span></label>
+        <div class="file-upload-wrapper">
+          <input type="file" id="fileUpload" name="File" required
+            onchange="document.getElementById('fileName').textContent = this.files[0]?.name || ''" />
+          <div class="file-upload-icon">📂</div>
+          <div class="file-upload-text"><span>Choose a file</span> or drag and drop here</div>
+          <div id="fileName"></div>
+        </div>
+      </div>
+
+      <div class="section-label">SMF Policies</div>
+
+      <div class="row">
+        <div class="form-group">
+          <label for="smfIntegrity">Integrity Policy <span class="required-badge">Required</span></label>
+          <select id="smfIntegrity" name="SMF Integrity Policy" required>
+            <option value="">Select policy</option>
+            <option value="Optional">Optional</option>
+            <option value="Required">Required</option>
+            <option value="N/A">N/A</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="smfConfidentiality">Confidentiality Policy <span class="required-badge">Required</span></label>
+          <select id="smfConfidentiality" name="SMF Confidentiality Policy" required>
+            <option value="">Select policy</option>
+            <option value="Optional">Optional</option>
+            <option value="Required">Required</option>
+            <option value="N/A">N/A</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" id="submitBtn">🔍 Run Compliance Assessment</button>
+
+      <div class="progress-bar-wrapper" id="progressWrapper">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <p id="status"></p>
+
+    </form>
+  </div>
+
+  <script>
+    document.getElementById("assessmentForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const status = document.getElementById("status");
+      const submitBtn = document.getElementById("submitBtn");
+      const progressWrapper = document.getElementById("progressWrapper");
+
+      // Lock the UI while processing
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span> Running Assessment...';
+      progressWrapper.style.display = "block";
+      status.textContent = "⏳ Analysing your configuration — this may take up to 60 seconds...";
+
+      const formData = new FormData(this);
+
+      try {
+        const response = await fetch("http://localhost:5678/webhook-test/a2d87e1a-f79c-4cc7-a750-4a1c26d40125", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
+        // n8n returns HTML directly from Show Dashboard — render it in the current tab
+        const htmlResult = await response.text();
+        document.open();
+        document.write(htmlResult);
+        document.close();
+
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = "🔍 Run Compliance Assessment";
+        progressWrapper.style.display = "none";
+        status.textContent = "⚠️ Submission failed. Make sure your n8n workflow is active and listening.";
+        console.error(err);
+      }
+    });
+  </script>
+
+</body>
+</html>

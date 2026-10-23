@@ -1,0 +1,684 @@
+{
+  "name": "Telecom Network Function Security Compliance Assessment and Remediation",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Retrieves relevant sections from O-RAN Alliance Work Group 11 and 3GPP specifications (TS 33.501, TS 38.470, TS 38.472) to verify security compliance requirements for network functions",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vector_store_key"
+        },
+        "topK": 5
+      },
+      "id": "8bfc87d2-5877-4d8c-b28b-3d88050025a0",
+      "name": "Knowledge Base Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        -8320,
+        1824
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "70af5e19-8813-4518-ad0c-52aa4f7908a0",
+      "name": "OpenAI Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -8144,
+        2144
+      ],
+      "credentials": {
+        "openAiApi": {
+          "name": "YOUR_OPENAI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=File: {{ $json.fileName }}\nFile Type: {{ $json.fileType }}\nNetwork Function: {{ $json.networkFunction }}\n{{ $json.revisionIteration ? \"Revision Iteration: \" + $json.revisionIteration : \"\" }}\n{{ $json.reflectionFeedback ? \"\\nPrevious Reflection Feedback:\\n\" + $json.reflectionFeedback : \"\" }}\n\nSource Code/Configuration:\n{{ $json.fileContent }}",
+        "options": {
+          "systemMessage": "You are a telecommunications security compliance expert specializing in O-RAN and 3GPP standards.\n\nYour task is to assess the security compliance of network function (RU, DU, CU) configuration files against official specifications.\n\nRevision Handling:\n- If this is a revision iteration (indicated by Revision Iteration field), carefully review the Previous Reflection Feedback\n- Address ALL issues identified in the reflection feedback\n\nMinimal-Change Policy (hard rules)\n- Do not modify any line unless it is strictly required to resolve a standards violation or fulfill a specific item in Previous Reflection Feedback.\n-Preserve all unrelated fields, ordering, whitespace, comments, and formatting.\n-Do not refactor, reorder keys, rename parameters, normalize formats, or “clean up” unless a cited spec explicitly requires it.\n-If compliance cannot be achieved without broader changes, stop and explain the blocking constraint with citations; do not apply speculative edits.\n-Return at all times the whole configuration not just the corrected lines\n\nAnalysis Process:\n1. Review the submitted configuration file\n2. If revision feedback is present, prioritize addressing those specific issues\n3. Use the telecom_spec_retriever tool to query relevant specification sections when needed\n4. Identify any security compliance violations or deviations from standards\n5. For each violation found:\n   - Cite the specific specification section violated\n   - Explain the security risk or impact\n   - Provide justified code-level modifications to achieve compliance\n6. If compliant, confirm adherence to applicable standards\n\nOutput Format:\nProvide a structured compliance assessment, including:\n- Compliance Status (Compliant/Non-Compliant)\n- Violations Found (if any)\n- Specification References for each violation\n- Recommended Code Modifications (if needed)\n- Security Impact Analysis\n\nIf non-compliant, provide the complete corrected configuration file wrapped in ```corrected``` code blocks.",
+          "passthroughBinaryImages": true,
+          "enableStreaming": true
+        }
+      },
+      "id": "46414fd3-34ad-4ece-938e-87cd2994fe19",
+      "name": "Compliance Assessment Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -8592,
+        1632
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "id": "a52c132f-95e9-4c06-ae9f-1d09edd83629",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -8592,
+        1808
+      ],
+      "credentials": {
+        "openAiApi": {
+          "name": "YOUR_OPENAI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c6f7c1ae-0d2f-42e3-9f69-e7fbefe027d5",
+              "name": "Assessment",
+              "value": "={{ (\n  ($json.output || '')\n    .replace(/```corrected[\\t ]*\\r?\\n[\\s\\S]*?\\r?\\n```/gi,'')                             /* remove fenced corrected block */\n    .replace(/^\\s*Corrected Configuration(?: File)?[^:\\n]*:\\s*(?:\\r?\\n)?[\\s\\S]*?(?=(?:\\r?\\n)?Summary:|$)/i,'')  /* remove narrative under the heading */\n    .replace(/Summary:\\s*([\\s\\S]*)$/i,'')                                                /* (optional) drop Summary if you only want assessment */\n    .replace(/^\\s*-{3,}\\s*$/gmi,'')                                                      /* clean --- separators */\n    .replace(/^\\s*Corrected Configuration(?: File)?[^:\\n]*:\\s*$/gmi,'')                  /* clean stray heading line if any */\n    .trim()\n) }}\n",
+              "type": "string"
+            },
+            {
+              "id": "89f05473-42a7-4964-9296-239c92fbcfc9",
+              "name": "correctedConfig",
+              "value": "={{ $json.output.match(/```corrected\\n([\\s\\S]*?)\\n```/)?.[1] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "3a65ef3a-3530-4d8d-b1d9-847a4fb1f7cc",
+              "name": "Summary",
+              "value": "={{ (((($json.output || '').replace(/```corrected[\\t ]*\\r?\\n[\\s\\S]*?\\r?\\n```/gi,'')) .match(/Summary:\\s*([\\s\\S]*)$/i) || [])[1] || '').trim() }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "055b342e-590d-4700-a20a-e07c7a803b65",
+      "name": "Extract Corrected Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -8272,
+        1632
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Filename: {{ $('Pre-process Files').item.json.File[0].filename }}\nFile Type: {{ $('Pre-process Files').item.json['File Type'] }}\nOriginal Configuration:\n{{ $('Pre-process Files').item.json.fileContent }}\n\nCorrected Configuration:\n{{ $json.correctedConfig }}\n\nOriginal Assessment:\n{{ $json.Assessment }}\n\nSummary:\n{{ $json.Summary }}\n\n{{ $json.executionResult ? \"Code Execution Result: \" + $json.executionResult + \"\\nErrors: \" + JSON.stringify($json.errors) : \"\" }}",
+        "options": {
+          "systemMessage": "You are a critical reviewer specializing in telecommunications security compliance.\n\nYour task is to review the corrected configuration provided by the compliance agent and determine if it truly resolves all identified violations.\n\nAnalysis Process:\n1. Compare the original and corrected configurations\n2. Verify each violation mentioned in the original assessment is addressed\n3. Use the telecom_spec_retriever tool to double-check compliance requirements\n5. Identify any remaining issues or new problems introduced\n\nOutput Format:\nProvide a JSON response with:\n{\n  \"needsRevision\": true/false,\n  \"reasoning\": \"Detailed explanation of your decision\",\n  \"remainingIssues\": [\"List of any remaining problems\"]\n}",
+          "passthroughBinaryImages": true,
+          "enableStreaming": true
+        }
+      },
+      "id": "0a0f3a58-3179-4f3f-8cb3-f6dea4fe7488",
+      "name": "Reflection Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -8032,
+        1632
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "id": "61e65e7f-f48e-4b66-9b62-8308a1404e05",
+      "name": "OpenAI Chat Model Reflection",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -8032,
+        1808
+      ],
+      "credentials": {
+        "openAiApi": {
+          "name": "YOUR_OPENAI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Network Function Security Compliance Assessment",
+        "formDescription": "Upload configuration files or source code for O-RAN/3GPP compliance analysis",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "File Type",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Configuration"
+                  },
+                  {
+                    "option": "Source Code"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Network Function Type/ Application",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "RU"
+                  },
+                  {
+                    "option": "DU"
+                  },
+                  {
+                    "option": "CU"
+                  },
+                  {
+                    "option": "xApp"
+                  },
+                  {
+                    "option": "rApp"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "File",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c25b4cd2-8a70-40dc-80b0-b733f7ea78cd",
+      "name": "Upload Configuration Files Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -8992,
+        1632
+      ],
+      "webhookId": "194051aa-8303-431d-a7de-c84ad86c3af2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "adb4b3e3-abca-403b-b278-c3bb337256ae",
+              "name": "needsRevision",
+              "value": "={{ JSON.parse($json.output).needsRevision }}",
+              "type": "boolean"
+            },
+            {
+              "id": "id-2",
+              "name": "revisionIteration",
+              "value": "={{ $json.revisionIteration ? $json.revisionIteration + 1 : 1 }}",
+              "type": "number"
+            },
+            {
+              "id": "id-1",
+              "name": "reflectionFeedback",
+              "value": "={{ JSON.parse($json.output).reasoning }}",
+              "type": "string"
+            },
+            {
+              "id": "c65160e4-7a38-44aa-9459-4a615dfd5b5a",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "0b171ef8-fef3-4c04-b4c3-2dc2710c7f8b",
+      "name": "Prepare Revision Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -7680,
+        1632
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.revisionIteration }}",
+              "rightValue": 5,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            },
+            {
+              "id": "fada78d2-8a77-49fe-9d64-38ad22d82869",
+              "leftValue": "={{ $json.needRevision }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "229e4793-14b8-44f6-8239-35df9aba755d",
+      "name": "Check Max Iterations",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -7504,
+        1792
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "memoryKey": {
+          "__rl": true,
+          "value": "vector_store_key",
+          "mode": "list",
+          "cachedResultName": "vector_store_key"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.2,
+      "position": [
+        -8528,
+        2032
+      ],
+      "id": "466e9de6-5bbf-415b-a960-b53c2f9c1b28",
+      "name": "Insert Data to Store"
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -8480,
+        2224
+      ],
+      "id": "813f2832-512c-47a7-b32a-117182f14629",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "content": "### 📚 Create Specification Knowledge Base",
+        "height": 348,
+        "width": 1036,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -9024,
+        1984
+      ],
+      "typeVersion": 1,
+      "id": "0e9e7484-9bb0-40c1-a0b2-762ddeb6e3b0",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "formTitle": "Upload your data to test RAG",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Upload your file(s)",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -8976,
+        2032
+      ],
+      "id": "aad6ec52-0f9e-48fb-b0b4-ae5c52ebe595",
+      "name": "Load Specification Files",
+      "webhookId": "82848bc4-5ea2-4e5a-8bb6-3c09b94a8c5d"
+    },
+    {
+      "parameters": {
+        "content": "### 📚 Static Compliance Agent",
+        "height": 396,
+        "width": 2012,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -9024,
+        1584
+      ],
+      "typeVersion": 1,
+      "id": "83141c54-cda9-430f-878d-e16b800c5b81",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all incoming items\nconst items = $input.all();\n\nfor (let i = 0; i < items.length; i++) {\n  // --- 1️⃣ Read the binary buffer for property \"File\"\n  const buffer = await this.helpers.getBinaryDataBuffer(i, 'File');\n\n  // --- 2️⃣ Convert the buffer to text (UTF-8 for text/plain)\n  const fileContent = buffer.toString('utf8');\n\n  // --- 3️⃣ Add the content to JSON output for inspection / next nodes\n  items[i].json.fileContent = fileContent;\n\n  // --- Optional: log it to the console for debugging (appears in n8n logs)\n  console.log(`File content for item ${i}:`, fileContent);\n}\n\n// Return modified items\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8800,
+        1632
+      ],
+      "id": "d1416dd1-a335-4681-88c6-65ac713ba1ea",
+      "name": "Pre-process Files"
+    },
+    {
+      "parameters": {
+        "description": "Executes the corrected source code to validate it runs without errors",
+        "language": "python",
+        "pythonCode": "# Execute the corrected source code and capture any errors\ntry:\n    corrected_code = $input.item.json.correctedConfig\n    exec(corrected_code)\n    return {'executionResult': 'success', 'errors': []}\nexcept Exception as e:\n    return {'executionResult': 'failed', 'errors': [str(e)]}"
+      },
+      "id": "4147cad1-48e6-49b8-8ab4-6ffbfbe8b413",
+      "name": "Code Execution Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        -6736,
+        1312
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "adb4b3e3-abca-403b-b278-c3bb337256ae",
+              "name": "Original Configuration",
+              "value": "={{ $('Pre-process Files').item.json.fileContent }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "Assessment of Configuration",
+              "value": "={{ $('Extract Corrected Config').item.json.Assessment }}",
+              "type": "string"
+            },
+            {
+              "id": "id-1",
+              "name": "Corrected Configuration",
+              "value": "={{ $('Extract Corrected Config').item.json.correctedConfig }}",
+              "type": "string"
+            },
+            {
+              "id": "c65160e4-7a38-44aa-9459-4a615dfd5b5a",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "5ca7f5aa-3fe2-47e1-a8e7-76dce9a42833",
+      "name": "Output Dashboard",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -7264,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -8656,
+        2144
+      ],
+      "id": "59dd39ea-76e6-4580-ab64-4a644c241470",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "filePath": "={{ '/data/uploads/' + $(\"Load Specification Files\").item.json[\"Upload your file(s)\"][0].filename }} ",
+        "dataPropertyName": "=data"
+      },
+      "name": "Read Binary File",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "position": [
+        -8816,
+        2144
+      ],
+      "typeVersion": 1,
+      "id": "e090c6d4-6bd6-4dcf-8f8f-b9f3eafbf355"
+    }
+  ],
+  "connections": {
+    "OpenAI Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Knowledge Base Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Insert Data to Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Knowledge Base Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Compliance Assessment Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Reflection Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Compliance Assessment Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compliance Assessment Agent": {
+      "main": [
+        [
+          {
+            "node": "Extract Corrected Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Corrected Config": {
+      "main": [
+        [
+          {
+            "node": "Reflection Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model Reflection": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Reflection Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reflection Agent": {
+      "main": [
+        [
+          {
+            "node": "Prepare Revision Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Configuration Files Form": {
+      "main": [
+        [
+          {
+            "node": "Pre-process Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Revision Input": {
+      "main": [
+        [
+          {
+            "node": "Check Max Iterations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Max Iterations": {
+      "main": [
+        [
+          {
+            "node": "Compliance Assessment Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Output Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Insert Data to Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Specification Files": {
+      "main": [
+        [
+          {
+            "node": "Insert Data to Store",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Read Binary File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-process Files": {
+      "main": [
+        [
+          {
+            "node": "Compliance Assessment Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Binary File": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

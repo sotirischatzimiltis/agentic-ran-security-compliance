@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite the paper below."
+title: "Agentic AI for 6G: A New Paradigm for Autonomous RAN Security Compliance"
+authors:
+  - family-names: Chatzimiltis
+    given-names: Sotiris
+    affiliation: "5G/6GIC, University of Surrey"
+  - family-names: Boloursaz Mashhadi
+    given-names: Mahdi
+    affiliation: "5G/6GIC, University of Surrey"
+  - family-names: Shojafar
+    given-names: Mohammad
+    affiliation: "5G/6GIC, University of Surrey"
+  - family-names: Debbah
+    given-names: Merouane
+    affiliation: "6G Research Center, Khalifa University"
+  - family-names: Tafazolli
+    given-names: Rahim
+    affiliation: "5G/6GIC, University of Surrey"
+license: CC-BY-4.0
+preferred-citation:
+  type: article
+  title: "Agentic AI for 6G: A New Paradigm for Autonomous RAN Security Compliance"
+  journal: "IEEE Communications Magazine"
+  status: submitted
+  authors:
+    - family-names: Chatzimiltis
+      given-names: Sotiris
+    - family-names: Boloursaz Mashhadi
+      given-names: Mahdi
+    - family-names: Shojafar
+      given-names: Mohammad
+    - family-names: Debbah
+      given-names: Merouane
+    - family-names: Tafazolli
+      given-names: Rahim
