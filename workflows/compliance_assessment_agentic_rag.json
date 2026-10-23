@@ -1,0 +1,1865 @@
+{
+  "name": "Security Compliance AgenticRAG_new_version_revisions",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=File={{$json.output.file||\"unknown\"}}\nNF={{$json.output.network_function||\"unknown\"}}\nStatus={{$json.output.compliance_status}}\nIter={{ $json.output.revisionIteration }}\nSMF Integrity Policy  = {{ $('Prepare Compliance Input').item.json.smf_integrity_policy }}\nSMF Confidentiality Policy = {{ $('Prepare Compliance Input').item.json.smf_confidentiality_policy }}\nKB_EVIDENCE:\n{{JSON.stringify($json.output.kb_evidence||[])}}\n\nVIOLATIONS:\n{{JSON.stringify($json.output.violations||[])}}\n\nORIGINAL_CONFIG:\n<<<ORIGINAL>>>\n{{ $('Prepare Compliance Input').item.json.original_config }}\n<<<END>>>\n\nCORRECTED_CONFIG:\n<<<CORRECTED>>>\n{{ $json.output.corrected_config || \"\" }}\n<<<END>>>\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "ROLE\nYou are a security audit gate. Validate the Compliance Agent output and decide whether the corrected configuration can be approved.\n\nSCOPE (hard)\n- Violations are valid ONLY if the insecure value exists explicitly in ORIGINAL_CONFIG.\n- Missing or absent features are NOT violations.\n- Use only provided kb_evidence or retrieved KB. Do not invent requirements.\n\nPARAMETER CONTEXT (hard)\nThe audit MUST respect runtime/context parameters provided in the user prompt (e.g., policy flags such as Required/Optional).\nA violation is valid only if it remains a violation under the provided parameters.\nIf a parameter makes a control optional/allowed, the agent must NOT mark non-compliance for disabling it (may be a recommendation).\nIf the Compliance Agent ignores parameters or treats conditional requirements as unconditional → revision required.\nVERIFY (in order)\n\n1) STRUCTURE\n- If compliance_status = \"Compliant\": violations must be [] and corrected_config must be \"\".\n- If compliance_status = \"Non-Compliant\": violations must be non-empty and corrected_config must contain the full file.\n\n2) EVIDENCE & KB\nFor each violation:\n- evidence.config_excerpt must appear verbatim in ORIGINAL_CONFIG.\n- kb_evidence_ids must exist in kb_evidence.\n- kb_evidence snippet must support the requirement.\nIf any check fails → revision required.\n\n3) FIX CORRECTNESS\n- Confirm each violation is fixed in corrected_config.\n- corrected_config must modify only necessary lines.\n- No new sections/keys.\n- No unrelated formatting/reordering.\n\n4) MISSED ISSUES\nScan ORIGINAL and corrected_config for explicit insecure settings (only if present)\n\n5) FINAL DECISION\nIf:\n- all violations valid,\n- all fixes correct,\n- no missed issues,\n→ new_version_compliance_status = \"Compliant\" and needsRevision = false.\n\nOtherwise:\n→ new_version_compliance_status = \"Non-Compliant\"\n→ needsRevision = true with clear required actions.\n\nOUTPUT\nReturn one JSON object only, concise.\n",
+          "passthroughBinaryImages": true,
+          "enableStreaming": true
+        }
+      },
+      "id": "4879ebac-1d58-4df5-91a0-57b9e0d5742a",
+      "name": "Reflection Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1488,
+        144
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "rag_compliance_33501",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -1456,
+        720
+      ],
+      "id": "dd7995c0-88fd-45c3-b00f-44decf4c5c7a",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "name": "YOUR_QDRANTAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.content }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "source_type",
+                "value": "={{ $('Chunk').item.json.metadata.source_type }}"
+              },
+              {
+                "name": "spec_type",
+                "value": "={{ $('Chunk').item.json.metadata.spec_type }}"
+              },
+              {
+                "name": "spec_number",
+                "value": "={{ $('Chunk').item.json.metadata.spec_number }}"
+              },
+              {
+                "name": "spec",
+                "value": "={{ $('Chunk').item.json.metadata.spec }}"
+              },
+              {
+                "name": "version",
+                "value": "={{ $('Chunk').item.json.metadata.version }}"
+              },
+              {
+                "name": "release",
+                "value": "={{ $('Chunk').item.json.metadata.release }}"
+              },
+              {
+                "name": "chunk_index",
+                "value": "={{ $('Chunk').item.json.metadata.chunk_index }}"
+              },
+              {
+                "name": "section_type",
+                "value": "={{ $('Chunk').item.json.metadata.section_type }}"
+              },
+              {
+                "name": "clause",
+                "value": "={{ $('Chunk').item.json.metadata.clause }}"
+              },
+              {
+                "name": "clause_title",
+                "value": "={{ $('Chunk').item.json.metadata.clause_title }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -1360,
+        880
+      ],
+      "id": "38c4c96a-e2ef-4d33-b3a5-921538479508",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1632,
+        896
+      ],
+      "id": "c4b55058-9a27-4168-bdc2-7f5a7b6e6d8c",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "name": "YOUR_OPENAIAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -1760,
+        720
+      ],
+      "id": "4808dd1d-fc75-4e9b-9a17-21e1f2130383",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1952,
+        704
+      ],
+      "id": "bf11a021-b3c5-420a-be27-36a3eca0a4eb",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.rerankerCohere",
+      "typeVersion": 1,
+      "position": [
+        -1472,
+        464
+      ],
+      "id": "83b284d9-25f9-40d4-915c-7a7609def51d",
+      "name": "Reranker Cohere",
+      "credentials": {
+        "cohereApi": {
+          "name": "YOUR_COHEREAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.revisionIteration }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            },
+            {
+              "id": "fada78d2-8a77-49fe-9d64-38ad22d82869",
+              "leftValue": "={{ $json.needsRevision }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d0e14498-cff6-489f-9fde-975845eca00b",
+      "name": "Max Iterations",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1024,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\n\n// take the first (and usually only) incoming item from the upload form\nconst item = items[0];\n\n// all uploaded files live in item.binary\nconst binaries = item.binary || {};\n\nfor (const key of Object.keys(binaries)) {\n  const file = binaries[key];\n\n  out.push({\n    json: {\n      originalKey: key,\n      filename: file.fileName || key,\n    },\n    binary: {\n      // normalize each file to a single binary key: \"data\"\n      data: file,\n    },\n  });\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2128,
+        704
+      ],
+      "id": "4adea643-4a68-47ca-8237-8715145220b9",
+      "name": "Pre-process PDFs"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Generic 3GPP PDF text cleaner + metadata extractor + clause-per-chunk splitter\n// For ETSI/3GPP TS/TR PDFs\n// ============================================================\n\n// -------------------- helpers --------------------\nfunction normalizeText(s) {\n  return (s || \"\")\n    .replace(/\\r\\n/g, \"\\n\")\n    .replace(/\\u00a0/g, \" \")\n    .replace(/[ \\t]+\\n/g, \"\\n\")\n    .replace(/[ \\t]{2,}/g, \" \")\n    .replace(/\\f/g, \"\\n\")\n    .replace(/\\n{3,}/g, \"\\n\\n\")\n    .trim();\n}\n\nfunction safeTrim(s) {\n  return typeof s === \"string\" ? s.trim() : s;\n}\n\nfunction escapeRegex(s) {\n  return (s || \"\").replace(/[.*+?^${}()|[\\]\\\\]/g, \"\\\\$&\");\n}\n\nfunction uniqBy(arr, keyFn) {\n  const seen = new Set();\n  const out = [];\n  for (const x of arr) {\n    const k = keyFn(x);\n    if (seen.has(k)) continue;\n    seen.add(k);\n    out.push(x);\n  }\n  return out;\n}\n\n// -------------------- metadata extraction --------------------\n/**\n * Extract generic 3GPP metadata from the first part of raw text.\n *\n * Supports patterns like:\n *   3GPP TS 33.501 version 18.9.0 Release 18\n *   3GPP TR 33.926 version 17.4.0 Release 17\n *   ETSI TS 133 501 V18.9.0 (2025-04)\n */\nfunction extract3gppMetaFromFirstChars(rawText, firstN = 4000) {\n  const head = (rawText || \"\").replace(/\\r\\n/g, \"\\n\").slice(0, firstN);\n\n  let spec_type = null;\n  let spec_number = null;\n  let version = null;\n  let release = null;\n  let spec = null;\n  let etsi_doc = null;\n  let title = null;\n\n  const mainMatch = head.match(\n    /\\b3GPP\\s+(TS|TR)\\s+(\\d{2}\\.\\d{3})\\s+version\\s+(\\d+\\.\\d+\\.\\d+)\\s+Release\\s+(\\d+)\\b/i\n  );\n\n  if (mainMatch) {\n    spec_type = (mainMatch[1] || \"\").toUpperCase();\n    spec_number = mainMatch[2] || null;\n    version = mainMatch[3] || null;\n    release = mainMatch[4] ? `Rel-${mainMatch[4]}` : null;\n    spec = `3GPP ${spec_type} ${spec_number}`;\n  }\n\n  const etsiMatch = head.match(\n    /\\bETSI\\s+(TS|TR)\\s+(\\d{3})\\s+(\\d{3})\\s+V(\\d+\\.\\d+\\.\\d+)\\b/i\n  );\n  if (etsiMatch) {\n    etsi_doc = `ETSI ${(etsiMatch[1] || \"\").toUpperCase()} ${etsiMatch[2]} ${etsiMatch[3]} V${etsiMatch[4]}`;\n  }\n\n  const lines = head.split(\"\\n\").map(x => x.trim()).filter(Boolean);\n\n  const idx3gpp = lines.findIndex(line =>\n    /3GPP\\s+(TS|TR)\\s+\\d{2}\\.\\d{3}\\s+version\\s+\\d+\\.\\d+\\.\\d+\\s+Release\\s+\\d+/i.test(line)\n  );\n\n  if (idx3gpp > 0) {\n    const candidateLines = [];\n    for (let i = Math.max(0, idx3gpp - 4); i < idx3gpp; i++) {\n      const line = lines[i];\n      if (!line) continue;\n      if (/^ETSI\\s+(TS|TR)\\b/i.test(line)) continue;\n      if (/^TECHNICAL\\s+(SPECIFICATION|REPORT)\\b/i.test(line)) continue;\n      if (/^(5G|LTE|NR|NG-RAN|E-UTRAN|UTRAN|GERAN)\\s*;?$/i.test(line)) continue;\n      if (/^\\(?3GPP\\s+(TS|TR)\\b/i.test(line)) continue;\n      if (/^version\\b/i.test(line)) continue;\n      candidateLines.push(line.replace(/\\s*;\\s*$/, \"\"));\n    }\n    if (candidateLines.length) {\n      title = candidateLines.join(\" \").replace(/\\s{2,}/g, \" \").trim();\n    }\n  }\n\n  return {\n    source_type: \"3gpp_spec\",\n    spec_type,\n    spec_number,\n    spec,\n    version,\n    release,\n    etsi_doc,\n    title,\n    meta_extracted_from: `first_${firstN}_chars`,\n  };\n}\n\n// -------------------- cleanup --------------------\nfunction remove3gppRunningHeadersAndFooters(text) {\n  if (typeof text !== \"string\") return text;\n  let t = text.replace(/\\r\\n/g, \"\\n\");\n\n  // Standalone ETSI line\n  t = t.replace(/\\n\\s*ETSI\\s*\\n/gi, \"\\n\");\n\n  // Common repeated running header/footer:\n  // 3GPP TS 33.501 version 18.9.0 Release 18 10 ETSI TS 133 501 V18.9.0 (2025-04)\n  t = t.replace(\n    /\\n\\s*3GPP\\s+(?:TS|TR)\\s+\\d{2}\\.\\d{3}\\s+version\\s+\\d+\\.\\d+\\.\\d+\\s+Release\\s+\\d+\\s+\\d{1,4}\\s+ETSI\\s+(?:TS|TR)\\s+\\d{3}\\s+\\d{3}\\s+V\\d+\\.\\d+\\.\\d+\\s*\\(\\d{4}-\\d{2}\\)\\s*\\n/gi,\n    \"\\n\"\n  );\n\n  // Looser spacing variant\n  t = t.replace(\n    /\\n\\s*3GPP\\s+(?:TS|TR)\\s+\\d{2}\\.\\d{3}[\\s\\S]{0,80}?Release\\s+\\d+[\\s\\S]{0,50}?ETSI\\s+(?:TS|TR)\\s+\\d{3}\\s+\\d{3}\\s+V\\d+\\.\\d+\\.\\d+[\\s\\S]{0,20}?\\n/gi,\n    \"\\n\"\n  );\n\n  // Common legal leftovers\n  t = t.replace(/\\n\\s*©\\s*ETSI\\s+\\d{4}\\s*\\.?\\s*\\n/gi, \"\\n\");\n  t = t.replace(/\\n\\s*All rights reserved\\.?\\s*\\n/gi, \"\\n\");\n\n  // Bare page number lines\n  t = t.replace(/\\n\\s*\\d{1,4}\\s*\\n/g, \"\\n\");\n\n  return normalizeText(t);\n}\n\nfunction dropFrontMatter(text) {\n  const m = text.match(/(?:^|\\n)1\\s+Scope\\s*(?:\\n|$)/i);\n  if (!m) return text;\n  return text.slice(m.index).trim();\n}\n\nfunction removeResidualBoilerplate(text) {\n  let t = text;\n\n  const junkHeadings = [\n    \"Intellectual Property Rights\",\n    \"Legal Notice\",\n    \"Modal verbs terminology\",\n    \"Foreword\",\n  ];\n\n  for (const heading of junkHeadings) {\n    const re = new RegExp(`\\\\n\\\\s*${escapeRegex(heading)}\\\\s*\\\\n`, \"gi\");\n    t = t.replace(re, \"\\n\");\n  }\n\n  return normalizeText(t);\n}\n\n// -------------------- heading detection --------------------\n/**\n * Matches 3GPP clause headings such as:\n *   1 Scope\n *   3 Definitions and abbreviations\n *   3.1 Definitions\n *   6.1.3.2 Authentication procedure for 5G AKA\n *   7A Security for trusted non-3GPP access ...\n *   5.8a Requirements on AUSF\n */\nconst CLAUSE_HEADING_RE =\n  /(^|\\n)((?:\\d+[A-Za-z]?)(?:\\.\\d+[A-Za-z]?){0,8})\\s+([A-Z][^\\n]{2,220})\\s*(?=\\n)/g;\n\n/**\n * Matches annex headings such as:\n *   Annex A (normative): Title\n *   Annex B (informative) Title\n *   Annex C: Title\n *   Annex D\n */\nconst ANNEX_HEADING_RE =\n  /(^|\\n)(Annex\\s+[A-Z]{1,3})\\s*(?:\\((normative|informative)\\))?\\s*:?\\s*([^\\n]{0,220})\\s*(?=\\n)/gi;\n\nfunction splitByHeadings(text) {\n  const markers = [];\n\n  CLAUSE_HEADING_RE.lastIndex = 0;\n  for (let m; (m = CLAUSE_HEADING_RE.exec(text)) !== null;) {\n    const start = m.index + (m[1] ? m[1].length : 0);\n    const clause = safeTrim(m[2]);\n    const title = safeTrim(m[3]);\n\n    if (!clause || !title) continue;\n    if (/\\.{5,}/.test(title)) continue; // likely TOC leader dots\n    if (/^\\d+\\s*$/.test(title)) continue;\n    if (/^(ETSI|Contents)$/i.test(title)) continue;\n\n    markers.push({\n      start,\n      type: \"clause\",\n      clause,\n      title,\n    });\n  }\n\n  ANNEX_HEADING_RE.lastIndex = 0;\n  for (let m; (m = ANNEX_HEADING_RE.exec(text)) !== null;) {\n    const start = m.index + (m[1] ? m[1].length : 0);\n\n    markers.push({\n      start,\n      type: \"annex\",\n      annex: safeTrim(m[2]),\n      annex_type: safeTrim((m[3] || \"\").toLowerCase()) || null,\n      title: safeTrim(m[4]) || null,\n    });\n  }\n\n  if (!markers.length) {\n    return [{ header: null, body: text }];\n  }\n\n  const deduped = uniqBy(\n    markers.sort((a, b) => a.start - b.start),\n    m => `${m.start}|${m.type}|${m.clause || \"\"}|${m.annex || \"\"}|${m.title || \"\"}`\n  );\n\n  const sections = [];\n  for (let i = 0; i < deduped.length; i++) {\n    const cur = deduped[i];\n    const nextStart = i + 1 < deduped.length ? deduped[i + 1].start : text.length;\n    let body = text.slice(cur.start, nextStart).trim();\n\n    // If annex title missing, infer from following line if possible\n    if (cur.type === \"annex\" && (!cur.title || cur.title.length < 3)) {\n      const lines = body.split(\"\\n\").map(x => x.trim()).filter(Boolean);\n      if (lines.length >= 2) {\n        const candidate = lines[1];\n        if (\n          candidate &&\n          candidate.length >= 3 &&\n          !/^\\d+([.]\\d+)*[A-Za-z]?\\s+/.test(candidate) &&\n          !/^Annex\\s+[A-Z]{1,3}/i.test(candidate)\n        ) {\n          cur.title = candidate;\n        }\n      }\n    }\n\n    const header =\n      cur.type === \"clause\"\n        ? { type: \"clause\", clause: cur.clause, title: cur.title }\n        : { type: \"annex\", annex: cur.annex, annex_type: cur.annex_type, title: cur.title };\n\n    sections.push({ header, body });\n  }\n\n  return sections;\n}\n\n// -------------------- clause-per-chunk sizing --------------------\n/**\n * Keeps each detected section as its own chunk.\n * Only splits when ONE section is itself too large.\n */\nfunction splitLargeSection(body, maxChars = 4500, overlapChars = 250) {\n  if (!body || body.length <= maxChars) return [body];\n\n  const parts = [];\n  let start = 0;\n\n  while (start < body.length) {\n    let end = Math.min(body.length, start + maxChars);\n\n    if (end < body.length) {\n      const paraBreak = body.lastIndexOf(\"\\n\\n\", end);\n      const lineBreak = body.lastIndexOf(\"\\n\", end);\n      const sentenceBreak = Math.max(\n        body.lastIndexOf(\". \", end),\n        body.lastIndexOf(\"; \", end)\n      );\n\n      let candidate = -1;\n      if (paraBreak > start + 500) candidate = paraBreak;\n      else if (lineBreak > start + 500) candidate = lineBreak;\n      else if (sentenceBreak > start + 500) candidate = sentenceBreak + 1;\n\n      if (candidate > start) end = candidate;\n    }\n\n    parts.push(body.slice(start, end).trim());\n    if (end >= body.length) break;\n\n    start = Math.max(0, end - overlapChars);\n  }\n\n  return parts.filter(Boolean);\n}\n\nfunction sizeControl(\n  sections,\n  { maxChars = 4500, overlapChars = 250 } = {}\n) {\n  const final = [];\n\n  for (const sec of sections) {\n    if (!sec.body || !sec.body.trim()) continue;\n\n    if (sec.body.length <= maxChars) {\n      final.push(sec);\n      continue;\n    }\n\n    const splits = splitLargeSection(sec.body, maxChars, overlapChars);\n    for (const piece of splits) {\n      final.push({\n        header: sec.header,\n        body: piece,\n      });\n    }\n  }\n\n  return final;\n}\n\n// -------------------- heading-only parent chunk filter --------------------\n/**\n * Returns true for chunks that are only the heading line with no real body.\n * Example:\n *   5.3 Requirements on the gNB\n *\n * This lets you skip empty container clauses while keeping real subclauses\n * like 5.3.1 and 5.3.2.\n */\nfunction isHeadingOnlyClauseChunk(body, clause) {\n  if (!body || !clause) return false;\n\n  const lines = body.split(\"\\n\").map(x => x.trim()).filter(Boolean);\n  if (lines.length === 0) return true;\n\n  const re = new RegExp(\"^\" + escapeRegex(clause) + \"\\\\s+\");\n  const firstIsOwnHeading = re.test(lines[0]);\n\n  return firstIsOwnHeading && lines.length === 1;\n}\n\nfunction isHeadingOnlyAnnexChunk(body, annex) {\n  if (!body || !annex) return false;\n\n  const lines = body.split(\"\\n\").map(x => x.trim()).filter(Boolean);\n  if (lines.length === 0) return true;\n\n  const re = new RegExp(\"^\" + escapeRegex(annex) + \"\\\\b\", \"i\");\n  const firstIsOwnHeading = re.test(lines[0]);\n\n  return firstIsOwnHeading && lines.length === 1;\n}\n\n// -------------------- metadata helpers --------------------\nfunction buildBaseMetadata(itemJson) {\n  const meta = {};\n\n  if (itemJson.source != null) meta.source = itemJson.source;\n  if (itemJson.blobType != null) meta.blobType = itemJson.blobType;\n  if (itemJson.loc != null) meta.loc = itemJson.loc;\n\n  if (meta.source == null) meta.source = \"blob\";\n  if (meta.blobType == null) meta.blobType = \"text/plain\";\n  if (meta.loc == null) meta.loc = {};\n\n  return meta;\n}\n\n// -------------------- chunk body cleanup --------------------\nfunction cleanChunkBody(body) {\n  return normalizeText(\n    (body || \"\")\n      .replace(/\\nContents\\s*\\n/gi, \"\\n\")\n      .replace(/\\nForeword\\s*\\n/gi, \"\\n\")\n  );\n}\n\n// -------------------- n8n entrypoint --------------------\nconst input = items[0]?.json ?? {};\nconst raw = input.text ?? input.data ?? \"\";\n\nconst baseMeta = buildBaseMetadata(input);\nconst specMeta = extract3gppMetaFromFirstChars(raw, 4000);\n\n// Clean document\nlet text = normalizeText(raw);\ntext = remove3gppRunningHeadersAndFooters(text);\ntext = dropFrontMatter(text);\ntext = removeResidualBoilerplate(text);\ntext = normalizeText(text);\n\n// Split by headings\nconst sections = splitByHeadings(text);\n\n// Make each clause/subclause its own chunk\nconst chunks = sizeControl(sections, {\n  maxChars: 4500,\n  overlapChars: 250,\n}).filter(c => {\n  if (c.header?.type === \"clause\") {\n    return !isHeadingOnlyClauseChunk(c.body, c.header.clause);\n  }\n  if (c.header?.type === \"annex\") {\n    return !isHeadingOnlyAnnexChunk(c.body, c.header.annex);\n  }\n  return true;\n});\n\n// Output LangChain-style docs\nreturn chunks.map((c, idx) => {\n  const metadata = {\n    ...baseMeta,\n    ...specMeta,\n    chunk_index: idx,\n  };\n\n  if (c.header?.type === \"clause\") {\n    metadata.section_type = \"clause\";\n    metadata.clause = c.header.clause;\n    metadata.clause_title = c.header.title;\n  } else if (c.header?.type === \"annex\") {\n    metadata.section_type = \"annex\";\n    metadata.annex = c.header.annex;\n    metadata.annex_type = c.header.annex_type;\n    metadata.annex_title = c.header.title;\n  } else {\n    metadata.section_type = \"unknown\";\n  }\n\n  return {\n    json: {\n      content: cleanChunkBody(c.body),\n      metadata,\n    },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        720
+      ],
+      "id": "65b6d250-cbd4-49ea-8861-e01ea41e105e",
+      "name": "Chunk"
+    },
+    {
+      "parameters": {
+        "formTitle": "Upload Documents for Semantic Database",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Add PDF Files Here",
+              "fieldType": "file",
+              "acceptFileTypes": ".pdf",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -2288,
+        704
+      ],
+      "id": "fcdc9993-0b62-45c3-8bed-e37069cf0d2f",
+      "name": "Upload Specifications",
+      "webhookId": "0d91ec3e-8192-4773-b4bc-fd4b0abca6d0"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        -2032,
+        448
+      ],
+      "id": "c86f1909-d801-4e6c-b45d-ef4a098d23c8",
+      "name": "LLM3",
+      "credentials": {
+        "deepSeekApi": {
+          "name": "YOUR_DEEPSEEKAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "operator_policies",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -1424,
+        1072
+      ],
+      "id": "f2e4f79f-4bf3-4215-a475-85855f26418a",
+      "name": "Qdrant Vector Store1",
+      "credentials": {
+        "qdrantApi": {
+          "name": "YOUR_QDRANTAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.text }}",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "source_type",
+                "value": "={{ $json.metadata.source_type }}"
+              },
+              {
+                "name": "policy_id",
+                "value": "={{ $json.metadata.policy_id }}"
+              },
+              {
+                "name": "title",
+                "value": "={{ $json.metadata.title }}"
+              },
+              {
+                "name": "severity",
+                "value": "={{ $json.metadata.severity }}"
+              },
+              {
+                "name": "version",
+                "value": "={{ $json.metadata.version }}"
+              },
+              {
+                "name": "=date",
+                "value": "={{ $json.metadata.date }}"
+              },
+              {
+                "name": "scope",
+                "value": "={{ $json.metadata.scope }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -1312,
+        1232
+      ],
+      "id": "fa20ed3e-f2df-4f92-9ebb-8ef0002f80b0",
+      "name": "Default Data Loader1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        1232
+      ],
+      "id": "68779226-3e1f-4501-b284-b90143692872",
+      "name": "Recursive Character Text Splitter1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1488,
+        1232
+      ],
+      "id": "7bfd1aa2-a642-40e6-a2e9-1f783521dc88",
+      "name": "Embeddings OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "name": "YOUR_OPENAIAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -1728,
+        1072
+      ],
+      "id": "ac4a0579-4fd8-4ef6-bc84-1bcbc309449a",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1920,
+        1056
+      ],
+      "id": "9014992e-d78e-49ec-9bb1-a6380b4c69ed",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "formTitle": "Upload Documents for Semantic Database",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Add Files Here",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -2256,
+        1056
+      ],
+      "id": "635c35b5-261b-4d98-b79d-7735ab535fb2",
+      "name": "Upload Internal Policies",
+      "webhookId": "d81d4180-01fb-42fb-84d9-6f3611b69bcd"
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\n\n// take the first (and usually only) incoming item from the upload form\nconst item = items[0];\n\n// all uploaded files live in item.binary\nconst binaries = item.binary || {};\n\nfor (const key of Object.keys(binaries)) {\n  const file = binaries[key];\n\n  out.push({\n    json: {\n      originalKey: key,\n      filename: file.fileName || key,\n    },\n    binary: {\n      // normalize each file to a single binary key: \"data\"\n      data: file,\n    },\n  });\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2080,
+        1056
+      ],
+      "id": "fc3737cc-85b6-450f-a19b-80956604d24a",
+      "name": "Pre-process Policies"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node (JavaScript)\n// Mode: Run Once for All Items\n// Input: items[0].json.data = full internal policy text (all policies in one string)\n// Output: one item per policy, with ONLY { text, metadata } and no duplicates\n\nfunction chunkAndNormalizeInternalPolicies(fullText) {\n  if (typeof fullText !== \"string\") {\n    throw new Error(\"Expected items[0].json.data to be a string.\");\n  }\n\n  const text = fullText.replace(/\\r\\n/g, \"\\n\");\n\n  // ---- Global metadata (stored once per policy in metadata) ----\n  const version = (text.match(/Version:\\s*([^\\n]+)/i) || [])[1]?.trim() || null;\n  const date = (text.match(/Date:\\s*([^\\n]+)/i) || [])[1]?.trim() || null;\n  const scope = (text.match(/Scope:\\s*([^\\n]+)/i) || [])[1]?.trim() || null;\n\n  // ---- Split into policy blocks (dynamic: supports any number of policies) ----\n  const parts = text.split(/\\n={10,}\\n(?=POLICY\\s+OP-SEC-\\d+\\n)/i);\n\n  const policyBlocks = parts\n    .map(p => p.trim())\n    .filter(p => /^POLICY\\s+OP-SEC-\\d+\\b/i.test(p));\n\n  return policyBlocks.map((block) => {\n    // ---- Extract per-policy metadata ----\n    const idMatch = block.match(/^POLICY\\s+(OP-SEC-\\d+)\\b/im);\n    const titleMatch = block.match(/^\\s*Title:\\s*(.+)\\s*$/im);\n    const severityMatch = block.match(/^\\s*Severity:\\s*(.+)\\s*$/im);\n\n    const policyId = idMatch ? idMatch[1].toUpperCase() : \"OP-SEC-UNKNOWN\";\n    const title = titleMatch ? titleMatch[1].trim() : \"Untitled Policy\";\n    const severity = severityMatch ? severityMatch[1].trim() : \"Unknown\";\n\n    // ---- Clean policy text (keep only meaningful content) ----\n    let cleanedText = block\n      // remove POLICY header + title + separator line\n      .replace(/^POLICY\\s+OP-SEC-\\d+\\s*\\n/i, \"\")\n      .replace(/^Title:\\s*.*\\n/i, \"\")\n      .replace(/^-{10,}\\n/, \"\")\n      // remove any trailing END/==== blocks if they got attached\n      .replace(/\\n=+\\nEND OF INTERNAL SECURITY POLICY\\n=+\\s*$/gi, \"\")\n      .replace(/\\n=+\\s*$/g, \"\")\n      .trim();\n\n    // remove duplicated severity line from text (severity lives in metadata)\n    cleanedText = cleanedText.replace(/\\nSeverity:\\s*.+\\s*$/i, \"\").trim();\n\n    return {\n      text: cleanedText,\n      metadata: {\n        source_type: \"internal_policy\",\n        policy_id: policyId,\n        title,\n        severity,\n        version,\n        date,\n        scope,\n      },\n    };\n  });\n}\n\n// ---- n8n entrypoint ----\nconst input = items[0]?.json?.data;\nconst normalized = chunkAndNormalizeInternalPolicies(input);\n\n// n8n requires: [{ json: ... }, ...]\nreturn normalized.map(obj => ({ json: obj }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        1072
+      ],
+      "id": "388ff424-632d-4d42-81ac-a94605ef2488",
+      "name": "Chunk Policies"
+    },
+    {
+      "parameters": {
+        "content": "Internal Policies ",
+        "height": 352,
+        "width": 1360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2320,
+        1024
+      ],
+      "typeVersion": 1,
+      "id": "4c6e4a63-eec4-4935-a263-ea57c43356cc",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "3GPP Speifications",
+        "height": 368,
+        "width": 1360,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2320,
+        656
+      ],
+      "typeVersion": 1,
+      "id": "78021d6d-c3bf-45a4-85d4-5fca4c284002",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Security Compliance",
+        "height": 704,
+        "width": 1936,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2320,
+        -48
+      ],
+      "typeVersion": 1,
+      "id": "c579f388-464d-4604-acad-f4db5b06316b",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "oran_specs",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -1424,
+        1424
+      ],
+      "id": "601d9b6d-2ab0-4330-b1c6-d1a8ae4dab51",
+      "name": "Qdrant Vector Store2",
+      "credentials": {
+        "qdrantApi": {
+          "name": "YOUR_QDRANTAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.pageContent }}",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "source_type",
+                "value": "={{ $json.metadata.source_type }}"
+              },
+              {
+                "name": "=o_ran_doc_id",
+                "value": "={{ $json.metadata.o_ran_doc_id }}"
+              },
+              {
+                "name": "title",
+                "value": "={{ $json.metadata.title }}"
+              },
+              {
+                "name": "version",
+                "value": "={{ $json.metadata.o_ran_version }}"
+              },
+              {
+                "name": "clause",
+                "value": "={{ $json.metadata.clause }}"
+              },
+              {
+                "name": "clause_title",
+                "value": "={{ $json.metadata.clause_title }}"
+              },
+              {
+                "name": "chunk_index",
+                "value": "={{ $json.metadata.chunk_index }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -1312,
+        1584
+      ],
+      "id": "438cfaa7-6fa4-4042-ac98-2df50e155039",
+      "name": "Default Data Loader2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        1584
+      ],
+      "id": "4ac642e2-e58d-4589-a62a-f7ab0abfa6f0",
+      "name": "Recursive Character Text Splitter2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1488,
+        1584
+      ],
+      "id": "25ba5016-6914-4d42-ae1b-44aea9af138f",
+      "name": "Embeddings OpenAI2",
+      "credentials": {
+        "openAiApi": {
+          "name": "YOUR_OPENAIAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -1728,
+        1424
+      ],
+      "id": "d90c1d9a-dfa2-414c-bc52-c77aa577b509",
+      "name": "Extract from File2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1920,
+        1408
+      ],
+      "id": "a361982e-0e18-44e2-b80f-2bfad0e5db6c",
+      "name": "Loop Over Items2"
+    },
+    {
+      "parameters": {
+        "content": "O-RAN Specifications",
+        "height": 352,
+        "width": 1360,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2320,
+        1376
+      ],
+      "typeVersion": 1,
+      "id": "5b290db1-02bd-457d-9338-b04aeca5b6de",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "formTitle": "Upload Documents for Semantic Database",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Add Files Here",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -2256,
+        1408
+      ],
+      "id": "1ae971d1-782f-4595-a6de-9c3611d0b872",
+      "name": "Upload O-RAN Specifications",
+      "webhookId": "8c91a989-86f1-4c0a-a24e-1f2ba9e051db"
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\n\n// take the first (and usually only) incoming item from the upload form\nconst item = items[0];\n\n// all uploaded files live in item.binary\nconst binaries = item.binary || {};\n\nfor (const key of Object.keys(binaries)) {\n  const file = binaries[key];\n\n  out.push({\n    json: {\n      originalKey: key,\n      filename: file.fileName || key,\n    },\n    binary: {\n      // normalize each file to a single binary key: \"data\"\n      data: file,\n    },\n  });\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2080,
+        1408
+      ],
+      "id": "11c0f9bc-90fe-4832-9803-1d2d9acf69ea",
+      "name": "Pre-process O-RAN Specs"
+    },
+    {
+      "parameters": {
+        "jsCode": "// -------------------- helpers --------------------\nfunction normalizeText(s) {\n  return (s || \"\")\n    .replace(/\\r\\n/g, \"\\n\")\n    .replace(/[ \\t]+\\n/g, \"\\n\")\n    .replace(/\\u00a0/g, \" \") // NBSP -> space\n    .replace(/[ \\t]{2,}/g, \" \")\n    .replace(/\\n{3,}/g, \"\\n\\n\")\n    .trim();\n}\n\n// O-RAN running header/footer remover\nfunction removeORanRunningHeadersAndFooters(text) {\n  if (typeof text !== \"string\") return text;\n  let t = text.replace(/\\r\\n/g, \"\\n\");\n\n  // Repeated copyright/footer blocks\n  t = t.replace(\n    /\\n\\s*©\\s*\\d{4}\\s+by\\s+the\\s+O-RAN\\s+ALLIANCE(?:\\s+e\\.V\\.)?[\\s\\S]{0,260}?\\n/gi,\n    \"\\n\"\n  );\n\n  // Repeated document identifier line\n  t = t.replace(\n    /\\n\\s*O-RAN\\.WG\\d{1,2}\\.(?:TR|TS)\\.[A-Z0-9.-]+-v\\d{2}\\.\\d{2}(?:\\.\\d{2})?\\s*\\n/gi,\n    \"\\n\"\n  );\n\n  // Looser doc-id-only variant\n  t = t.replace(\n    /\\n\\s*O-RAN\\.WG\\d{1,2}\\.(?:TR|TS)\\.[A-Z0-9.-]{6,}\\s*\\n/gi,\n    \"\\n\"\n  );\n\n  // Standalone page numbers\n  t = t.replace(/\\n\\s*\\d{1,4}\\s*\\n/g, \"\\n\");\n\n  // Cleanup\n  t = t.replace(/[ \\t]+\\n/g, \"\\n\").replace(/\\n{3,}/g, \"\\n\\n\").trim();\n  return t;\n}\n\n// Drop front matter by starting at Clause 1 \"Scope\" if found\nfunction dropFrontMatter(text) {\n  const idx = text.search(/\\n1\\s+Scope\\s*\\n/i);\n  if (idx > 0) return text.slice(idx).trim();\n  return text;\n}\n\n// -------------------- metadata extraction --------------------\nfunction pickORanTitleFromHead(head) {\n  const lines = head\n    .split(\"\\n\")\n    .map((x) => x.replace(/\\s+/g, \" \").trim())\n    .filter(Boolean);\n\n  const isBad = (s) => {\n    const t = (s || \"\").trim();\n    if (!t) return true;\n\n    // legal / boilerplate\n    if (/^(copyright|©)\\b/i.test(t)) return true;\n    if (/^the copying or incorporation\\b/i.test(t)) return true;\n    if (/your use is subject\\b/i.test(t)) return true;\n    if (/all rights reserved\\b/i.test(t)) return true;\n    if (/register of associations|vat|bonn|germany|buschkauler/i.test(t)) return true;\n\n    // avoid selecting the doc id itself\n    if (/^O-RAN\\.WG\\d{1,2}\\.(TR|TS)\\./i.test(t)) return true;\n\n    // too long to be a title line\n    if (t.length > 220) return true;\n\n    return false;\n  };\n\n  const looksLikeGroupLine = (t) => {\n    const s = (t || \"\").trim();\n    if (!s) return false;\n    if (/^O-RAN\\s+Work\\s+Group\\b/i.test(s)) return true;\n    if (/\\b(Work|Focus|Working)\\s+Group\\b/i.test(s)) return true;\n    if (/\\bGroup\\)\\s*$/i.test(s)) return true; // \"(Security Work Group)\"\n    return false;\n  };\n\n  const isClauseLike = (t) => /^\\d+(\\.\\d+)*\\s+/.test((t || \"\").trim());\n\n  // Join consecutive title lines (handles multi-line titles)\n  const joinTitleLines = (startIdx, maxLines = 3) => {\n    const parts = [];\n    for (let k = startIdx; k < lines.length && parts.length < maxLines; k++) {\n      const s = lines[k];\n\n      if (isBad(s)) break;\n      if (looksLikeGroupLine(s)) break;\n      if (isClauseLike(s)) break;\n\n      // Stop if we hit obvious section labels\n      if (/^(abstract|foreword|introduction|contents|table of contents)\\b/i.test(s)) break;\n\n      parts.push(s);\n    }\n\n    if (parts.length === 0) return null;\n\n    // Merge with spaces + fix “hyphen at line end” artifacts\n    let title = parts.join(\" \").replace(/\\s+/g, \" \").trim();\n    title = title.replace(/-\\s+/g, \"-\"); // e.g. \"Log- Management\" -> \"Log-Management\" (best effort)\n    title = title.replace(/-\\s+/g, \"-\"); // apply twice to be safe\n\n    // Optional: if you dislike \"Log-Management\", you can turn hyphen+space into space:\n    // title = title.replace(/-\\s+/g, \" \");\n\n    return title.length >= 6 ? title : null;\n  };\n\n  // 1) Best: meaningfully close to \"O-RAN Work Group ...\"\n  for (let i = 0; i < lines.length; i++) {\n    if (/^O-RAN\\s+Work\\s+Group\\b/i.test(lines[i])) {\n      // Skip the group line and start scanning for the actual title\n      for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {\n        const cand = lines[j];\n        if (isBad(cand)) continue;\n        if (looksLikeGroupLine(cand)) continue;\n\n        // Prefer \"Study on ...\" when present, and consider it start of multi-line title\n        if (/^Study on\\b/i.test(cand)) {\n          const joined = joinTitleLines(j, 3);\n          if (joined) return joined;\n          return cand;\n        }\n\n        // Otherwise: first plausible title line becomes start of multi-line title\n        if (cand.length >= 8 && cand.length <= 140) {\n          const joined = joinTitleLines(j, 3);\n          if (joined) return joined;\n          return cand;\n        }\n      }\n    }\n  }\n\n  // 2) Next best: any \"Study on ...\" near the top, join follow-up line(s)\n  for (let i = 0; i < Math.min(lines.length, 80); i++) {\n    const l = lines[i];\n    if (isBad(l) || looksLikeGroupLine(l)) continue;\n    if (/^Study on\\b/i.test(l)) {\n      const joined = joinTitleLines(i, 3);\n      if (joined) return joined;\n      return l;\n    }\n  }\n\n  // 3) Fallback: first decent short line, join follow-ups\n  for (let i = 0; i < Math.min(lines.length, 80); i++) {\n    const l = lines[i];\n    if (isBad(l) || looksLikeGroupLine(l) || isClauseLike(l)) continue;\n    if (l.length >= 8 && l.length <= 140) {\n      const joined = joinTitleLines(i, 2);\n      if (joined) return joined;\n      return l;\n    }\n  }\n\n  return null;\n}\n\n\nfunction extractORanMeta(rawText, { headChars = 12000 } = {}) {\n  const raw = (rawText || \"\").replace(/\\r\\n/g, \"\\n\");\n  const head = raw.slice(0, headChars);\n\n  // Canonical doc-id (tight)\n  const CANON_ID_RE =\n    /\\b(O-RAN\\.WG(\\d{1,2})\\.(TR|TS)\\.[A-Z0-9.-]+?-v(\\d{2}\\.\\d{2}(?:\\.\\d{2})?))\\b/i;\n\n  // Spaced variant (OCR / extraction oddities)\n  const SPACED_ID_RE =\n    /\\bO\\s*-\\s*RAN\\s*\\.?\\s*WG\\s*(\\d{1,2})\\s*\\.?\\s*(TR|TS)\\s*\\.?\\s*([A-Z0-9.-]+?)\\s*-?\\s*v\\s*(\\d{2}\\.\\d{2}(?:\\.\\d{2})?)\\b/i;\n\n  let m = head.match(CANON_ID_RE);\n  if (!m) m = raw.match(CANON_ID_RE);\n\n  let doc_id = null,\n    wg = null,\n    doc_type = null,\n    version = null;\n\n  if (m) {\n    doc_id = m[1];\n    wg = m[2];\n    doc_type = (m[3] || \"\").toUpperCase();\n    version = m[4] || null;\n  } else {\n    const s = head.match(SPACED_ID_RE) || raw.match(SPACED_ID_RE);\n    if (s) {\n      wg = s[1];\n      doc_type = (s[2] || \"\").toUpperCase();\n      const body = (s[3] || \"\").replace(/\\s+/g, \"\");\n      version = s[4] || null;\n      doc_id = `O-RAN.WG${wg}.${doc_type}.${body}-v${version}`;\n    }\n  }\n\n  const title = pickORanTitleFromHead(head);\n\n  return {\n    source_type: \"o_ran_spec\",\n    o_ran_doc_id: doc_id,\n    o_ran_wg: wg ? `WG${wg}` : null,\n    o_ran_doc_type: doc_type, // TR / TS\n    o_ran_version: version ? `v${version}` : null,\n    spec: doc_id || \"O-RAN SPEC\",\n    title,\n    meta_extracted_from: `head_${headChars}_chars_with_fulltext_fallback`,\n  };\n}\n\n// -------------------- heading-based chunking --------------------\n// Clause headings like: \"5.3.2 Title...\"\nconst CLAUSE_HEADING_RE =\n  /(^|\\n)(\\d+(?:\\.\\d+){0,6})\\s+([A-Z].{3,180})\\s*(?=\\n)/g;\n\n// Annex headings like: \"Annex A (normative): Title\", \"Annex A: Title\", or \"Annex:\" then title next line\nconst ANNEX_HEADING_RE =\n  /(^|\\n)(Annex(?:\\s+[A-Z]{1,3})?)\\s*(?:\\((normative|informative)\\))?\\s*(?::\\s*([^\\n]{0,220}))?\\s*(?=\\n)/gi;\n\nfunction splitByHeadings(text) {\n  const markers = [];\n\n  CLAUSE_HEADING_RE.lastIndex = 0;\n  for (let m; (m = CLAUSE_HEADING_RE.exec(text)) !== null; ) {\n    const start = m.index + (m[1] ? m[1].length : 0);\n    markers.push({ start, type: \"clause\", clause: m[2], title: m[3].trim() });\n  }\n\n  ANNEX_HEADING_RE.lastIndex = 0;\n  for (let m; (m = ANNEX_HEADING_RE.exec(text)) !== null; ) {\n    const start = m.index + (m[1] ? m[1].length : 0);\n    const annexRaw = (m[2] || \"Annex\").replace(/\\s+/g, \" \").trim();\n    const annex_type = (m[3] || \"\").toLowerCase() || null;\n    const title = (m[4] || \"\").trim() || null;\n\n    markers.push({\n      start,\n      type: \"annex\",\n      annex: annexRaw,\n      annex_type,\n      title,\n    });\n  }\n\n  if (markers.length === 0) return [{ header: null, body: text }];\n\n  markers.sort((a, b) => a.start - b.start);\n\n  const sections = [];\n  for (let i = 0; i < markers.length; i++) {\n    const cur = markers[i];\n    const nextStart = i + 1 < markers.length ? markers[i + 1].start : text.length;\n    let body = text.slice(cur.start, nextStart).trim();\n\n    // If annex has no inline title, infer from next non-empty line\n    if (cur.type === \"annex\" && (!cur.title || cur.title.length < 3)) {\n      const lines = body.split(\"\\n\").map((x) => x.trim()).filter(Boolean);\n      if (lines.length >= 2) {\n        const possibleTitle = lines[1];\n        if (!/^\\d+(\\.\\d+)*\\s+/.test(possibleTitle) && possibleTitle.length >= 3) {\n          cur.title = possibleTitle;\n        }\n      }\n    }\n\n    const header =\n      cur.type === \"clause\"\n        ? { type: \"clause\", clause: cur.clause, title: cur.title }\n        : { type: \"annex\", annex: cur.annex, annex_type: cur.annex_type, title: cur.title };\n\n    sections.push({ header, body });\n  }\n\n  return sections;\n}\n\nfunction sizeControl(\n  sections,\n  { minChars = 900, maxChars = 4500, overlapChars = 250 } = {}\n) {\n  const merged = [];\n  let buf = null;\n\n  const flush = () => {\n    if (buf) merged.push(buf);\n    buf = null;\n  };\n\n  for (const sec of sections) {\n    if (!buf) {\n      buf = { header: sec.header, body: sec.body };\n      continue;\n    }\n\n    if (buf.body.length < minChars) {\n      buf.body = (buf.body + \"\\n\\n\" + sec.body).trim();\n      continue;\n    }\n\n    flush();\n    buf = { header: sec.header, body: sec.body };\n  }\n  flush();\n\n  const final = [];\n  for (const sec of merged) {\n    if (sec.body.length <= maxChars) {\n      final.push(sec);\n      continue;\n    }\n    let start = 0;\n    while (start < sec.body.length) {\n      const end = Math.min(sec.body.length, start + maxChars);\n      final.push({ header: sec.header, body: sec.body.slice(start, end).trim() });\n      if (end === sec.body.length) break;\n      start = Math.max(0, end - overlapChars);\n    }\n  }\n  return final;\n}\n\n// -------------------- n8n entrypoint --------------------\nconst raw = items[0]?.json?.text ?? items[0]?.json?.extractedText ?? items[0]?.json?.data ?? \"\";\n\n// Guard: raw PDF bytes accidentally passed in\nif (typeof raw === \"string\" && raw.trimStart().startsWith(\"%PDF-\")) {\n  throw new Error(\"Input is raw PDF bytes (%PDF-...). Use an Extract Text From PDF step first.\");\n}\n\n// Extract O-RAN metadata (robust)\nconst specMeta = extractORanMeta(raw, { headChars: 12000 });\n\n// Clean + normalize\nlet text = normalizeText(raw);\ntext = removeORanRunningHeadersAndFooters(text);\ntext = dropFrontMatter(text);\ntext = normalizeText(text);\n\n// Chunk\nconst sections = splitByHeadings(text);\nconst chunks = sizeControl(sections, { minChars: 900, maxChars: 4500, overlapChars: 250 });\n\n// Output LangChain-style docs\nreturn chunks.map((c, idx) => {\n  const meta = { ...specMeta, chunk_index: idx };\n\n  if (c.header?.type === \"clause\") {\n    meta.section_type = \"clause\";\n    meta.clause = c.header.clause;\n    meta.clause_title = c.header.title;\n  } else if (c.header?.type === \"annex\") {\n    meta.section_type = \"annex\";\n    meta.annex = c.header.annex;\n    meta.annex_type = c.header.annex_type;\n    meta.annex_title = c.header.title;\n  } else {\n    meta.section_type = \"unknown\";\n  }\n\n  return {\n    json: {\n      pageContent: c.body,\n      metadata: meta,\n    },\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        1424
+      ],
+      "id": "22c74b8f-710f-41ca-964c-eef0b9be4ee9",
+      "name": "Chunk O-RAN Specs"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "6a5e7af2-260e-44ff-a769-25cc0828ab49",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2688,
+        144
+      ],
+      "id": "6afd4502-d253-44bf-af04-7579d110c5d2",
+      "name": "Webhook",
+      "webhookId": "6a5e7af2-260e-44ff-a769-25cc0828ab49",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -1904,
+        -144
+      ],
+      "id": "ce383b0b-d4be-4b0c-a182-c84f7868e47e",
+      "name": "LLM1",
+      "credentials": {
+        "openAiApi": {
+          "name": "YOUR_OPENAIAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"required\": [\n  \"revisionIteration\",\n  \"file\",\n  \"network_function\",\n  \"compliance_status\",\n  \"violations\",\n  \"summary\",\n  \"corrected_config\",\n  \"kb_evidence\"\n],\n  \"properties\": {\n    \"revisionIteration\": { \"type\": \"integer\", \"minimum\": 1 },\n\n    \"file\": { \"type\": \"string\" },\n    \"file_type\": { \"type\": \"string\" },\n    \"network_function\": { \"type\": \"string\" },\n    \"nf_type_inferred\": { \"type\": \"string\" },\n\n    \"compliance_status\": {\n      \"type\": \"string\",\n      \"enum\": [\"Compliant\", \"Non-Compliant\"]\n    },\n\n    \"summary\": { \"type\": \"string\" },\n    \"corrected_config\": { \"type\": \"string\" },\n\n    \"kb_evidence\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"required\": [\"evidence_id\", \"source\", \"snippet\"],\n        \"properties\": {\n          \"evidence_id\": { \"type\": \"string\" },\n          \"source\": { \"type\": \"string\", \"enum\": [\"Internal\", \"3GPP\", \"O-RAN\", \"ETSI\"] },\n          \"snippet\": { \"type\": \"string\" },\n          \"spec_number\": { \"type\": \"string\" },\n          \"clause\": { \"type\": \"string\" },\n          \"chunk_id\": { \"type\": \"string\" }\n        }\n      }\n    },\n\n    \"violations\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"required\": [\n          \"id\",\n          \"severity\",\n          \"title\",\n          \"evidence\",\n          \"requirement\",\n          \"references\",\n          \"kb_evidence_ids\"\n        ],\n        \"properties\": {\n          \"id\": { \"type\": \"string\" },\n          \"severity\": {\n            \"type\": \"string\",\n            \"enum\": [\"Critical\", \"High\", \"Medium\", \"Low\"]\n          },\n          \"title\": { \"type\": \"string\" },\n\n          \"evidence\": {\n            \"type\": \"object\",\n            \"required\": [\"config_path\", \"current_value\", \"config_excerpt\"],\n            \"properties\": {\n              \"config_path\": { \"type\": \"string\" },\n              \"current_value\": { \"type\": \"string\" },\n              \"config_excerpt\": { \"type\": \"string\" }\n            }\n          },\n\n          \"requirement\": { \"type\": \"string\" },\n          \"references\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n          \"kb_evidence_ids\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n\n          \"minimal_fix\": { \"type\": \"string\" },\n          \"impact\": { \"type\": \"string\" }\n        }\n      }\n    },\n\n    \"out_of_scope_recommendations\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    }\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1648,
+        -32
+      ],
+      "id": "920fd5b5-66a7-4a0d-a5b3-469577d04744",
+      "name": "Compliance Output"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"additionalProperties\": true,\n  \"required\": [\n    \"revisionIteration\",\n    \"needsRevision\",\n    \"new_version_compliance_status\",\n    \"reasoning\",\n    \"issues\",\n    \"mustFixSummary\",\n    \"corrected_config_as_final\"\n  ],\n  \"properties\": {\n    \"revisionIteration\": { \"type\": \"integer\", \"minimum\": 1 },\n\n    \"needsRevision\": { \"type\": \"boolean\" },\n    \"new_version_compliance_status\": {\n      \"type\": \"string\",\n      \"enum\": [\"Compliant\", \"Non-Compliant\"]\n    },\n    \"reasoning\": { \"type\": \"string\" },\n    \"issues\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"required\": [\"id\", \"type\", \"description\", \"required_action\"],\n        \"properties\": {\n          \"id\": { \"type\": \"string\" },\n          \"type\": { \"type\": \"string\" },\n          \"description\": { \"type\": \"string\" },\n          \"required_action\": { \"type\": \"string\" }\n        }\n      }\n    },\n    \"mustFixSummary\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"corrected_config_as_final\": { \"type\": \"string\" }\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1360,
+        32
+      ],
+      "id": "8e3cc2b1-7220-40ab-af1e-754bc2fe969f",
+      "name": "Reflection Output"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -1536,
+        -224
+      ],
+      "id": "29cf47a9-8d3d-4048-9a28-905692cdeeeb",
+      "name": "LLM2",
+      "credentials": {
+        "openAiApi": {
+          "name": "YOUR_OPENAIAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\n\n// Helper to escape HTML characters safely\nconst esc = (s) => String(s ?? \"\").replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\n\n// Generate the Numbered Violation List\nconst violationList = (d.violations || []).map(v => `\n  <div class=\"violation-item\">\n    <div class=\"violation-header\">\n      <div class=\"v-title-row\">\n        <span class=\"v-num\">${v.display_id}.</span>\n        <span class=\"v-title\">${esc(v.title)}</span>\n      </div>\n      <span class=\"v-sev ${String(v.severity).toLowerCase()}\">${esc(v.severity)}</span>\n    </div>\n    <div class=\"v-body\">\n      <div class=\"v-meta\">\n        <p><b>Non-Compliant Value:</b> <code class=\"bad\">${esc(v.evidence?.current_value)}</code></p>\n        <p><b>Fix:</b> <span class=\"fix\">${esc(v.minimal_fix)}</span></p>\n        <p><b>Reference:</b> <span class=\"ref-tag\">${esc(v.formatted_ref)}</span></p>\n      </div>\n      \n      <div class=\"v-chunk\">\n        <div class=\"v-chunk-label\">Specification Text:</div>\n        <p>${esc(v.chunk_text)}</p>\n      </div>\n    </div>\n  </div>\n`).join(\"\");\n\nconst html = `<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    :root { \n      --bg: #0d1117; --card: #161b22; --border: #30363d; \n      --text: #c9d1d9; --accent: #58a6ff; --danger: #f85149; \n      --success: #3fb950; --purple: #bc8cff; --muted: #8b949e;\n    }\n    body { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; background: var(--bg); color: var(--text); padding: 40px; line-height: 1.6; margin: 0; }\n    \n    /* Header & Top Stats */\n    .header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 25px; }\n    h1 { font-size: 26px; margin: 0; font-weight: 600; }\n    .stats { display: flex; gap: 15px; margin-top: 15px; }\n    .stat-box { background: var(--card); border: 1px solid var(--border); padding: 8px 16px; border-radius: 6px; font-size: 13px; }\n    \n    .section-label { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; display: block; letter-spacing: 1px; margin-top: 30px; }\n    \n    /* Compliance Summary Block */\n    .summary-card { background: rgba(88, 166, 255, 0.05); border: 1px solid var(--accent); padding: 20px; border-radius: 8px; margin-bottom: 10px; }\n    \n    /* Violation Card Styles */\n    .violation-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }\n    .violation-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }\n    .v-num { font-weight: bold; color: var(--accent); margin-right: 8px; font-size: 18px; }\n    .v-title { font-weight: 600; font-size: 16px; color: #f0f6fc; }\n    .v-sev { font-size: 10px; font-weight: 800; padding: 3px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }\n    .v-sev.critical, .v-sev.high { background: #490606; color: #ff7b72; border: 1px solid rgba(248, 81, 73, 0.4); }\n    .v-sev.medium { background: #3d2b1b; color: #f2cc60; border: 1px solid rgba(187, 128, 9, 0.4); }\n    \n    .v-body { padding: 20px; }\n    .v-meta p { margin: 6px 0; font-size: 14px; }\n    .bad { color: #ffa198; background: #2c1616; padding: 2px 6px; border-radius: 4px; font-family: monospace; }\n    .fix { color: var(--success); font-weight: 500; }\n    .ref-tag { color: var(--accent); font-weight: 600; font-family: monospace; }\n    \n    /* Highlighted Specification/Chunk Text */\n    .v-chunk { margin-top: 20px; background: #0d1117; border-left: 4px solid var(--accent); padding: 18px; border-radius: 0 4px 4px 0; }\n    .v-chunk-label { font-size: 11px; font-weight: bold; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }\n    .v-chunk p { margin: 0; font-size: 14px; color: #b1bac4; font-style: italic; line-height: 1.5; }\n\n    /* Reflection Analysis Block */\n    .reflection-card { border: 1px solid var(--purple); background: rgba(188, 140, 255, 0.05); padding: 20px; border-radius: 8px; }\n    .reflection-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }\n    .rev-pill { padding: 2px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }\n    .rev-yes { background: #3d2b1b; color: #f2cc60; border: 1px solid #f2cc60; }\n    .rev-no { background: #1b2b3d; color: #79c0ff; border: 1px solid #79c0ff; }\n\n    /* Comparison Review Grid */\n    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }\n    pre { background: #0d1117; padding: 15px; border: 1px solid var(--border); font-size: 12px; color: #d1d5db; overflow-x: auto; max-height: 450px; border-radius: 6px; }\n    \n    .status-pill { padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; }\n    .non-compliant { background: var(--danger); color: white; }\n    .compliant { background: var(--success); color: white; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>Security Compliance Report</h1>\n    <div class=\"stats\">\n      <div class=\"stat-box\"><b>File:</b> ${esc(d.file)}</div>\n      <div class=\"stat-box\"><b>Function:</b> ${esc(d.network_function)}</div>\n      <div class=\"stat-box\"><b>Status:</b> <span class=\"status-pill ${d.compliance_status === 'Compliant' ? 'compliant' : 'non-compliant'}\">${esc(d.compliance_status)}</span></div>\n    </div>\n  </div>\n\n  <span class=\"section-label\">Compliance Assessment Summary</span>\n  <div class=\"summary-card\">\n    <p style=\"margin:0; font-size: 15px;\">${esc(d.compliance_summary)}</p>\n  </div>\n\n  <span class=\"section-label\">Violation Details</span>\n  <div class=\"violation-list\">\n    ${violationList || '<p style=\"color:var(--muted);\">No security violations identified in this configuration.</p>'}\n  </div>\n\n  <span class=\"section-label\">Reflection Agent Analysis</span>\n  <div class=\"reflection-card\">\n    <div class=\"reflection-header\">\n      <span class=\"rev-pill ${d.needs_revision ? 'rev-yes' : 'rev-no'}\">\n        REVISION NEEDED: ${d.needs_revision ? 'YES' : 'NO'}\n      </span>\n    </div>\n    <p style=\"margin:0; font-size: 14px; color: #d1d9e6; line-height: 1.6;\">${esc(d.reflection_reasoning)}</p>\n  </div>\n\n  <span class=\"section-label\">Configuration Review</span>\n  <div class=\"grid\">\n    <div>\n      <p style=\"font-size: 11px; font-weight: bold; color: var(--muted); margin-bottom: 8px; text-transform: uppercase;\">Original Configuration</p>\n      <pre>${esc(d.original_config)}</pre>\n    </div>\n    <div>\n      <p style=\"font-size: 11px; font-weight: bold; color: var(--muted); margin-bottom: 8px; text-transform: uppercase;\">Corrected Configuration</p>\n      <pre>${esc(d.corrected_config || \"No corrections required.\")}</pre>\n    </div>\n  </div>\n</body>\n</html>`;\n\nconst filename = (d.file ? String(d.file).replace(/[^\\w.-]+/g, \"_\") : \"compliance-report\");\nconst htmlFilename = `${filename}.html`;\n\nconst buffer = Buffer.from(html, \"utf8\");\nconst binaryData = await this.helpers.prepareBinaryData(buffer, htmlFilename, \"text/html\");\n\nreturn [\n  {\n    json: {\n      ...d,\n      htmlFilename,\n      // optional: remove `html` if you don't want it in JSON\n    },\n    binary: {\n      data: binaryData,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        160
+      ],
+      "id": "da21f24e-bc4f-4f48-b8b4-09f459e54bf3",
+      "name": "Create HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pre = $('Prepare Compliance Input').first().json;\nconst ca = $('Compliance Assessment Agent').first().json.output;\nconst ra = $('Reflection Agent').first().json.output;\n\nconst kbEvidence = (ca.kb_evidence ?? []);\n// Create a map of snippets using evidence_id as the key\nconst evidenceMap = new Map(kbEvidence.map(e => [String(e.evidence_id), e]));\n\nconst violations = (ca.violations ?? []).map((v, index) => {\n  // Extract the reference ID (e.g., if ID is V1, look for evidence_id \"1\")\n  const refId = v.id ? v.id.replace(/\\D/g, '') : (index + 1).toString();\n  const evidence = evidenceMap.get(refId);\n\n  return {\n    ...v,\n    display_id: index + 1,\n    // CRITICAL: Mapping the 'snippet' from KB evidence to the violation\n    chunk_text: evidence?.snippet || v.requirement || \"Detailed specification text not found.\",\n    // Formatting the source label\n    formatted_ref: (v.references && v.references.length > 0) ? v.references.join(\", \") : \n                   (evidence ? `${evidence.source} TS ${evidence.spec_number || evidence.o_ran_doc_id} §${evidence.clause}` : \"Internal Policy\")\n  };\n});\n\nreturn [{\n  json: {\n    file: ca.file || pre.fileName,\n    network_function: ca.network_function || \"CU\",\n    original_config: pre.original_config ?? \"\",\n    compliance_status: ca.compliance_status,\n    compliance_summary: ca.summary, // Summary from the Compliance Agent\n    violations: violations,\n    needs_revision: ra.needsRevision,\n    reflection_reasoning: ra.reasoning || \"No reflection reasoning provided.\",\n    corrected_config: ca.corrected_config ?? \"\",\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        160
+      ],
+      "id": "27cbab12-4b59-4e00-b92d-f16a33603c10",
+      "name": "Extract Fields"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Call this tool to gather internal policy documentation",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "operator_policies",
+          "mode": "list",
+          "cachedResultName": "operator_policies"
+        },
+        "topK": 3,
+        "useReranker": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -2240,
+        1216
+      ],
+      "id": "e3b216b3-39ec-4be8-84e0-6d4d5c7dea93",
+      "name": "Internal KB",
+      "credentials": {
+        "qdrantApi": {
+          "name": "YOUR_QDRANTAPI_CREDENTIAL"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\"queries\"],\n  \"properties\": {\n    \"queries\": {\n      \"type\": \"array\",\n      \"minItems\": 1,\n      \"maxItems\": 15,\n      \"uniqueItems\": true,\n      \"items\": {\n        \"type\": \"string\",\n        \"minLength\": 8,\n        \"maxLength\": 150\n      }\n    }\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1888,
+        464
+      ],
+      "id": "cb8c03f0-0e94-4ddc-968c-0380ee71015e",
+      "name": "Queries Output"
+    },
+    {
+      "parameters": {
+        "formTitle": "Network Function Security Compliance Assessment",
+        "formDescription": "Upload configuration files or source code for O-RAN/3GPP compliance analysis",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "File Type",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Configuration"
+                  },
+                  {
+                    "option": "Source Code"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Network Function Type/ Application",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "RU"
+                  },
+                  {
+                    "option": "DU"
+                  },
+                  {
+                    "option": "gNB(CU)"
+                  },
+                  {
+                    "option": "gNB(CU-UP)"
+                  },
+                  {
+                    "option": "gbn(CU-CP)"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "File",
+              "fieldType": "file",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "SMF Integrity Policy",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Optional"
+                  },
+                  {
+                    "option": "Required"
+                  },
+                  {
+                    "option": "N/A"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "SMF Confidentiality Policy ",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Optional"
+                  },
+                  {
+                    "option": "Required"
+                  },
+                  {
+                    "option": "N/A"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a6b41b41-dd8c-431a-8073-997a6e936f30",
+      "name": "Upload Configuration Files Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -2208,
+        144
+      ],
+      "webhookId": "31f8fbf6-ab30-43ad-941d-cf4cd018f006"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-2",
+              "name": "revisionIteration",
+              "value": "={{ ($json.revisionIteration ?? 1) + 1 }}",
+              "type": "number"
+            },
+            {
+              "id": "ec7b761e-1e44-4b2d-857a-13e6877411c3",
+              "name": "original_config",
+              "value": "={{ $json.original_config || $('Prepare Compliance Input').item.json.original_config }}",
+              "type": "string"
+            },
+            {
+              "id": "e9e6ff19-0609-4f35-9b31-5711ddd130cb",
+              "name": "working_config",
+              "value": "={{ $json.working_config || $json.corrected_config_as_final || $json.corrected_config || $('Prepare Compliance Input').item.json.working_config || $('Prepare Compliance Input').item.json.original_config }}",
+              "type": "string"
+            },
+            {
+              "id": "dc3b83b5-d32a-4cde-8ded-acc6ef3825c3",
+              "name": "fileName",
+              "value": "={{ $('Prepare Compliance Input').item.json.fileName }}",
+              "type": "string"
+            },
+            {
+              "id": "8b37cd42-8c19-4dca-9506-f3ec90a05045",
+              "name": "network_function",
+              "value": "={{ $('Prepare Compliance Input').item.json.network_function }}",
+              "type": "string"
+            },
+            {
+              "id": "9bc4d36d-3cc8-4c0f-9226-43c50313647c",
+              "name": "fileType",
+              "value": "={{ $('Prepare Compliance Input').item.json.fileType }}",
+              "type": "string"
+            },
+            {
+              "id": "b3446b2c-ba92-439d-9da5-c4f42a3c2cc8",
+              "name": "smf_integrity_policy",
+              "value": "={{ $json.smf_integrity_policy || $('Prepare Compliance Input').item.json.smf_integrity_policy }}",
+              "type": "string"
+            },
+            {
+              "id": "aff1d5f5-97f0-47d6-8dc9-67205bdfc333",
+              "name": "smf_confidentiality_policy",
+              "value": "={{ $json.smf_confidentiality_policy || $('Prepare Compliance Input').item.json.smf_confidentiality_policy }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "7f8a0584-00ce-4efa-be9d-bc2cff1c8238",
+      "name": "Prepare Revision Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -848,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Prepare Compliance Input (simplified, no fileContent)\n *\n * Assumptions:\n * - Iteration 1: binary File is present\n * - Iteration 2+: Prepare Revision Input already sets:\n *     original_config\n *     working_config\n *     fileName\n *     fileType\n *     network_function\n *     revisionIteration (optional)\n *     reflectionFeedback (optional)\n *     smf_integrity_policy (recommended)\n *     smf_confidentiality_policy (recommended)\n */\n\nconst items = $input.all();\n\n// Helper: read policy values from multiple possible places/keys\nfunction readIntegrity(j) {\n  return (\n    j?.smf_integrity_policy ??\n    j?.[\"SMF Integrity Policy\"] ??\n    j?.body?.[\"SMF Integrity Policy\"] ??\n    j?.body?.smf_integrity_policy ??\n    \"\"\n  );\n}\n\nfunction readConfidentiality(j) {\n  return (\n    j?.smf_confidentiality_policy ??\n    j?.[\"SMF Confidentiality Policy\"] ??\n    j?.[\"SMF Confidentiality Policy \"] ?? // handles trailing-space key\n    j?.body?.[\"SMF Confidentiality Policy\"] ??\n    j?.body?.[\"SMF Confidentiality Policy \"] ??\n    j?.body?.smf_confidentiality_policy ??\n    \"\"\n  );\n}\n\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i];\n\n  // 1) Flatten LLM/Agent output if wrapped in { output: {...} }\n  if (item.json?.output && typeof item.json.output === \"object\") {\n    item.json = { ...item.json, ...item.json.output };\n    delete item.json.output;\n  }\n\n  const hasBinaryFile = !!item.binary?.File;\n\n  // ========= Iteration 1 =========\n  if (hasBinaryFile) {\n    const buffer = await this.helpers.getBinaryDataBuffer(i, \"File\");\n    const configText = buffer.toString(\"utf8\");\n\n    // Initialize configs\n    item.json.original_config = configText;\n    item.json.working_config = configText;\n\n    // Metadata\n    item.json.fileName =\n      item.json.fileName ?? item.binary.File.fileName ?? \"unknown\";\n\n    item.json.fileType =\n      item.json.fileType ?? item.json?.body?.file_type ?? \"Configuration\";\n\n    item.json.network_function =\n      item.json.network_function ??\n      $input.first().json[\"Network Function Type/ Application\"] ??\n      \"unknown\";\n\n    // Iteration\n    item.json.revisionIteration = item.json.revisionIteration ?? 1;\n\n    // No feedback on first pass\n    item.json.reflectionFeedback = item.json.reflectionFeedback ?? \"\";\n\n    // --- SMF policies: capture from upload form into normalized keys\n    item.json.smf_integrity_policy = readIntegrity(item.json);\n    item.json.smf_confidentiality_policy = readConfidentiality(item.json);\n  } else {\n    // ========= Iteration 2+ =========\n    // --- SMF policies: carry forward if present; otherwise try to recover from any legacy keys\n    item.json.smf_integrity_policy =\n      item.json.smf_integrity_policy || readIntegrity(item.json);\n\n    item.json.smf_confidentiality_policy =\n      item.json.smf_confidentiality_policy || readConfidentiality(item.json);\n  }\n\n  // ========= Validate required fields (must exist every iteration) =========\n  const missing = [];\n\n  if (!item.json.original_config) missing.push(\"original_config\");\n  if (!item.json.working_config) missing.push(\"working_config\");\n  if (!item.json.fileName) missing.push(\"fileName\");\n  if (!item.json.fileType) missing.push(\"fileType\");\n  if (!item.json.network_function) missing.push(\"network_function\");\n\n  // If Integrity policy is REQUIRED, enforce it here by uncommenting:\n  // if (!item.json.smf_integrity_policy) missing.push(\"smf_integrity_policy\");\n\n  if (missing.length) {\n    throw new Error(\n      `Prepare Compliance Input: missing required fields: ${missing.join(\n        \", \"\n      )}. Ensure 'Prepare Revision Input' sets them for loop iterations.`\n    );\n  }\n\n  // Normalize optional fields\n  item.json.revisionIteration = item.json.revisionIteration ?? 1;\n  item.json.reflectionFeedback = item.json.reflectionFeedback ?? \"\";\n  item.json.smf_integrity_policy = item.json.smf_integrity_policy ?? \"\";\n  item.json.smf_confidentiality_policy =\n    item.json.smf_confidentiality_policy ?? \"\";\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1968,
+        144
+      ],
+      "id": "f0d05f70-4687-4cc4-9bf1-ace9c5cbf8b0",
+      "name": "Prepare Compliance Input"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nfor (let i = 0; i < items.length; i++) {\n  // Ensure file exists\n  if (!items[i].binary?.File) {\n    throw new Error(\"No binary file found. Expected form-data field named 'File'.\");\n  }\n\n  // Read binary buffer\n  const buffer = await this.helpers.getBinaryDataBuffer(i, 'File');\n  const fileContent = buffer.toString('utf8');\n\n  // Pull form fields from webhook body\n  const nf = $input.first().json[\"Network Function Type/ Application\"];\n  const ft = items[i].json?.body?.file_type || \"Configuration\";\n\n  // Attach for downstream nodes\n  items[i].json.fileContent = fileContent;\n  items[i].json.fileName = items[i].binary.File.fileName || \"unknown\";\n  items[i].json.mimeType = items[i].binary.File.mimeType || \"application/octet-stream\";\n  items[i].json.fileType = ft;\n  items[i].json.network_function = nf;\n}\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2176,
+        -208
+      ],
+      "id": "19c3b611-8a4f-4066-9bca-275225e9c9fc",
+      "name": "Prepare Compliance Input1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(i => {\n  if (i.json && i.json.output && typeof i.json.output === \"object\") {\n    i.json = { ...i.json, ...i.json.output };\n    delete i.json.output;\n  }\n  return i;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1200,
+        144
+      ],
+      "id": "191dd258-55ef-49ba-99cc-074615bc5f98",
+      "name": "Flatten Reflection Output"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1776,
+        -352
+      ],
+      "id": "ff9692cf-f284-4ba3-ab92-3c333c12cf49",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "name": "YOUR_GOOGLEPALMAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1184,
+        -256
+      ],
+      "id": "9c23b1db-99d3-49b6-b6a1-e1c2760bb73f",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "name": "YOUR_GOOGLEPALMAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "mistral-large-latest",
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -1792,
+        -16
+      ],
+      "id": "0da411e5-225c-4936-a03c-63983104abb1",
+      "name": "Mistral Cloud Chat Model",
+      "credentials": {
+        "mistralCloudApi": {
+          "name": "YOUR_MISTRALCLOUDAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "mistral-large-latest",
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -1472,
+        -48
+      ],
+      "id": "3c523348-fafc-44d0-a66d-3395fe5e4646",
+      "name": "Mistral Cloud Chat Model1",
+      "credentials": {
+        "mistralCloudApi": {
+          "name": "YOUR_MISTRALCLOUDAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "ORANKB: \"Search O-RAN Alliance specs (O-RAN.WG11, Security Focus Group) \n         for Open RAN-specific security controls. Use for O1/E2/A1 \n         interface security, near-RT RIC, and O-CU/O-DU security profiles.\"",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "oran_specs",
+          "mode": "list",
+          "cachedResultName": "oran_specs"
+        },
+        "topK": 3,
+        "useReranker": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -1408,
+        352
+      ],
+      "id": "3b25d47e-6b6f-4f29-8492-b7e56b1feefc",
+      "name": "ORANKB",
+      "credentials": {
+        "qdrantApi": {
+          "name": "YOUR_QDRANTAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "GPP3KB: \"Search 3GPP TS specifications (33.501, 38.323, 38.331, etc.) \n         for security requirements. Use for NAS, RRC, PDCP integrity, \n         ciphering, authentication, and UE security capability rules.\"",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "rag_compliance_33501",
+          "mode": "list",
+          "cachedResultName": "rag_compliance_33501"
+        },
+        "useReranker": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -1664,
+        352
+      ],
+      "id": "733c1374-fc58-4d41-8da3-770e9205f1a8",
+      "name": "GPP3KB",
+      "credentials": {
+        "qdrantApi": {
+          "name": "YOUR_QDRANTAPI_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Call this tool to extract Query sentences for the knowledge base.",
+        "text": "=Network Function: {{ $('Prepare Compliance Input').item.json[\"Network Function Type/ Application\"] }} \nConfiguration snippet: \n<<<CONFIG_START>>> \n{{ $('Prepare Compliance Input').item.json.working_config }} <<<CONFIG_END>>>",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "ROLE:\nYou are a 5G-6G/O-RAN Security Specialist. Your task is to identify security-relevant parameters within a configuration file and generate targeted, atomic search queries for a Knowledge Base.\n\nANALYSIS PROCESS:\nIdentify: Scan the configuration for parameters related to security.\nAbstract: Remove specific instance values (IPs, keys, IDs).\nFormat: Create one atomic query per security control.\n\nSECURITY DOMAINS TO COVER (if present in config):\n- Integrity protection (RRC, NAS, PDCP)\n- Ciphering / confidentiality algorithms\n- Authentication and key management\n- Interface security (IPsec, TLS)\n- Security capabilities and algorithm priority lists\n- Null algorithm usage (EEA0, EIA0)\n- Timer and retry parameters for security procedures\n\nSTRICT RULES:\nAtomicity: Each query must address one specific security setting.\nPrefixing: Every query MUST start with the provided Network Function token.\nDeduplication: Ensure no two queries cover the same security requirement.\nOutput ONLY the required JSON.\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        -2032,
+        336
+      ],
+      "id": "853b92dd-9fb4-4767-b103-703fdf3e308b",
+      "name": "RAG_Query_Generator"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=File={{ $json.fileName || \"unknown\" }}\nType={{ $json.body?.file_type || $json.fileType || \"unknown\" }}\nNF={{ $json.body?.network_function || $json.network_function || $json[\"Network Function Type/ Application\"] || \"unknown\" }}\nIter={{ $json.revisionIteration ?? 1 }}\n\n{{ $json.reflectionFeedback\n  ? \"REVISION_INSTRUCTIONS:\\n\" + $json.reflectionFeedback\n  : \"\" }}\n\nSMF Integrity Policy = {{ $json.smf_integrity_policy }}\nSMF Confidentiality Policy = {{ $json.smf_confidentiality_policy }}\n\nORIGINAL_CONFIG:\n<<<ORIGINAL>>>\n{{ $json.original_config }}\n<<<END>>>\n\nWORKING_CONFIG:\n<<<WORKING>>>\n{{ $json.working_config }}\n<<<END>>>\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "ROLE\nYou assess STATIC security compliance of Open RAN configuration files \nusing 3GPP standards.\n\nREASONING PROCESS (internal, execute before producing output)\nStep 1 - Call RAG_Query_Generator once with the full config.\nStep 2 - Issue ALL KB queries simultaneously against GPP3KB in parallel.\n         Once all results are back, stop. Do not re-query.\nStep 3 - Scan ORIGINAL_CONFIG for security-relevant parameters.\nStep 4 - Classify each parameter using only the collected KB evidence.\nStep 5 - Emit JSON output.\n\nDo NOT call RAG_Query_Generator more than once.\nDo NOT classify a parameter as a violation without a matching KB entry.\n\nKB CALL BUDGET (hard)\n- RAG_Query_Generator: exactly 1 call\n- GPP3KB: maximum 5 calls total\n- ORANKB: maximum 2 calls total\n\nSCOPE (hard)\n- Violations ONLY for insecure values EXPLICITLY present in ORIGINAL_CONFIG.\n- Missing/unconfigured features are NOT violations.\n\nSMF CONTEXT (hard)\n- SMF_Integrity_Policy ∈ {Required, Optional, N/A}\n- SMF_Confidentiality_Policy ∈ {Required, Optional, N/A}\nIf marked as Optional, disabling it is not a violation unless a 3GPP \"shall/shall not\" requirement is violated.\nif marked N/A then do not take it into account\n\nNODE CONTEXT (hard)\n- CU-CP: control plane parameters only\n- CU-UP: user plane parameters only\n- CU:    both planes\n\nKNOWLEDGE GROUNDING (hard)\nEvery violation must cite a retrieved KB chunk via kb_evidence_ids.\nNo KB evidence → out_of_scope_recommendations, never a violation.\n\nCHUNK USAGE (hard)\nWhen classifying in Step 4, for each parameter:\n- Find the single most relevant KB chunk by matching parameter name \n  or security control type.\n- Use that chunk's spec number and clause as evidence.standard_ref.\n- Do not quote chunks verbatim — extract only the rule that applies.\n\nEVIDENCE (hard)\nEach violation must include:\n- evidence.config_path\n- evidence.current_value\n- evidence.config_excerpt  ← exact text from ORIGINAL_CONFIG\n- evidence.standard_ref    ← from retrieved KB chunk\n\nFIXES (hard)\n- Edit WORKING_CONFIG only, minimal inline changes.\n- Preserve formatting, comments, order. No new sections or keys.\n- If Compliant: violations=[] and corrected_config=\"\"\n\nOUTPUT\nReturn one JSON object only, matching the schema.",
+          "passthroughBinaryImages": true,
+          "enableStreaming": true
+        }
+      },
+      "id": "9da9a86a-e9a2-439c-b4f2-75d6aafb17ad",
+      "name": "Compliance Assessment Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1792,
+        144
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $('Create HTML').item.json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -592,
+        368
+      ],
+      "id": "6d3b8f6c-d5e9-4a63-967b-2e6cbcca6507",
+      "name": "Show Dashboard"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/openran/compliance",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2224,
+        352
+      ],
+      "id": "64e7d6df-a7eb-4f18-8123-c80af5afa152",
+      "name": "Webhook1",
+      "webhookId": "b348857f-af33-4678-85bc-ad5782525e06"
+    }
+  ],
+  "connections": {
+    "Reflection Agent": {
+      "main": [
+        [
+          {
+            "node": "Flatten Reflection Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "GPP3KB",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Chunk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reranker Cohere": {
+      "ai_reranker": [
+        [
+          {
+            "node": "GPP3KB",
+            "type": "ai_reranker",
+            "index": 0
+          },
+          {
+            "node": "ORANKB",
+            "type": "ai_reranker",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Max Iterations": {
+      "main": [
+        [
+          {
+            "node": "Prepare Revision Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-process PDFs": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Specifications": {
+      "main": [
+        [
+          {
+            "node": "Pre-process PDFs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "RAG_Query_Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store1",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter1": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader1",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Internal KB",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Chunk Policies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Internal Policies": {
+      "main": [
+        [
+          {
+            "node": "Pre-process Policies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-process Policies": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk Policies": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader2": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store2",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter2": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader2",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "ORANKB",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File2": {
+      "main": [
+        [
+          {
+            "node": "Chunk O-RAN Specs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items2": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Extract from File2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload O-RAN Specifications": {
+      "main": [
+        [
+          {
+            "node": "Pre-process O-RAN Specs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-process O-RAN Specs": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk O-RAN Specs": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        []
+      ]
+    },
+    "LLM1": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Compliance Output": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Compliance Assessment Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reflection Output": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Reflection Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM2": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Create HTML": {
+      "main": [
+        []
+      ]
+    },
+    "Extract Fields": {
+      "main": [
+        [
+          {
+            "node": "Create HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queries Output": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "RAG_Query_Generator",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Internal KB": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "Upload Configuration Files Form": {
+      "main": [
+        [
+          {
+            "node": "Prepare Compliance Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Revision Input": {
+      "main": [
+        [
+          {
+            "node": "Prepare Compliance Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Compliance Input": {
+      "main": [
+        [
+          {
+            "node": "Compliance Assessment Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten Reflection Output": {
+      "main": [
+        [
+          {
+            "node": "Max Iterations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Compliance Assessment Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Reflection Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ORANKB": {
+      "ai_tool": [
+        [
+          {
+            "node": "Reflection Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Compliance Assessment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPP3KB": {
+      "ai_tool": [
+        [
+          {
+            "node": "Reflection Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Compliance Assessment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG_Query_Generator": {
+      "ai_tool": [
+        [
+          {
+            "node": "Compliance Assessment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compliance Assessment Agent": {
+      "main": [
+        [
+          {
+            "node": "Reflection Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

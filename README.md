@@ -36,17 +36,30 @@ figures/          Paper figures (PNG/PDF) and draw.io sources
 knowledge_base/   List of the specifications used for RAG (not redistributed; see below)
 ```
 
+## Workflows
+
+| File | Description |
+|---|---|
+| `workflows/compliance_assessment_agentic_rag.json` | **Main workflow used for the paper's results.** Compliance Assessment Agent with a RAG Query Generator tool, Reflection Agent with structured outputs and an iteration limit, three Qdrant knowledge bases (3GPP, O-RAN, operator policies), Cohere reranking, and an HTML dashboard response. GPT-4.1, Gemini 2.5 Flash and Mistral Large chat-model nodes are included; connect the one you want to evaluate. |
+| `workflows/compliance_assessment_openai_rag.json` | Earlier, simpler prototype: OpenAI only, with an in-memory vector store. |
+
 ## Running the prototype
 
 1. Install [n8n](https://docs.n8n.io/hosting/) (e.g. `npx n8n` or Docker) and open it at `http://localhost:5678`.
-2. Import the workflow: **Workflows → Import from File** → `workflows/compliance_assessment_openai_rag.json`.
-3. Create an OpenAI credential in n8n and assign it to the *OpenAI Embeddings* and *OpenAI Chat Model* nodes.
-4. Download the specifications listed in [`knowledge_base/SOURCES.md`](knowledge_base/SOURCES.md) and load them through the **Load Specification Files** form trigger. This fills the in-memory vector store.
-5. Submit a configuration from `data/configs/` through the **Upload Configuration Files Form**, or open `web/submit_form.html` in a browser while the workflow is listening.
+2. Start a local [Qdrant](https://qdrant.tech/documentation/quickstart/) instance (`docker run -p 6333:6333 qdrant/qdrant`).
+3. Import `workflows/compliance_assessment_agentic_rag.json` via **Workflows → Import from File**.
+4. Create the n8n credentials and assign them to the nodes marked `YOUR_..._CREDENTIAL`:
+   - Qdrant (local)
+   - OpenAI (embeddings and GPT-4.1)
+   - Cohere (reranker)
+   - Google Gemini and/or Mistral Cloud, for the model you are testing
+5. Download the specifications listed in [`knowledge_base/SOURCES.md`](knowledge_base/SOURCES.md). Load them through the form triggers, which fill these Qdrant collections:
+   - **Upload Specifications** → `rag_compliance_33501` (3GPP)
+   - **Upload O-RAN Specifications** → `oran_specs`
+   - **Upload Internal Policies** → `operator_policies` (use `data/policies/`)
+6. Submit a configuration from `data/configs/` through the **Upload Configuration Files Form**, or open `web/submit_form.html` in a browser. It posts to the `/openran/compliance` webhook.
 
-> **Note:** the workflow currently included is the OpenAI + RAG variant. Exports of the Agentic RAG variant and of the Gemini / Mistral model configurations will be added to `workflows/`.
-
-The in-memory vector store is cleared whenever n8n restarts, so repeat step 4 after each restart.
+The No-RAG and RAG baselines were obtained from the same workflow by disconnecting the RAG Query Generator tool, or by giving the knowledge-base tools directly to the Compliance Assessment Agent.
 
 ## Reproducing the analysis
 
